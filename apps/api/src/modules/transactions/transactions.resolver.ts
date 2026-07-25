@@ -140,8 +140,9 @@ export class TransactionsResolver {
   async addWitness(
     @Args('input') addWitnessInput: AddWitnessInput,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
-    return this.transactionsService.addWitness(addWitnessInput, user.id);
+    return this.transactionsService.addWitness(addWitnessInput, user.id, orgId);
   }
 
   @Query(() => TransactionsResponse, { name: 'transactions' })
@@ -179,15 +180,17 @@ export class TransactionsResolver {
   async findOne(
     @Args('id', { type: () => ID }) id: string,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
-    return this.transactionsService.findOne(id, user.id, true);
+    return this.transactionsService.findOne(id, user.id, orgId, true);
   }
 
   @Mutation(() => Transaction)
   async removeTransaction(
     @Args('id', { type: () => ID }) id: string,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
-    return this.transactionsService.remove(id, user.id);
+    return this.transactionsService.remove(id, user.id, orgId);
   }
 }

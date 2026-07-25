@@ -370,5 +370,32 @@ describe('ContactsService — findAll pagination', () => {
       // loan — flips to the LOAN_RECEIVED sign (-1).
       expect(balance).toBe(-100);
     });
+
+    it("does NOT pull in the linked platform user's unrelated private personal-ledger activity for an org contact", async () => {
+      // promoteContactToOrg copies linkedUserId onto the org copy (for
+      // perspective flipping on transactions *within that org*) — it must
+      // not also open the door to Aisha's private personal transactions
+      // with some other org member leaking into the org balance.
+      prisma.contact.findUnique.mockResolvedValue({
+        linkedUserId: 'aisha-user-id',
+        orgId: 'org-1',
+      });
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        {
+          type: 'LOAN_RECEIVED',
+          amount: { toNumber: () => 100 },
+          parentId: null,
+          createdById: 'fawaz',
+          conversions: [],
+        },
+      ]);
+
+      const balance = await service.getBalance('org-aisha-contact', 'bello');
+
+      expect(balance).toBe(-100);
+      // Only the direct-transactions query ran — no reverse-perspective
+      // query for an org contact, regardless of linkedUserId.
+      expect(prisma.transaction.findMany).toHaveBeenCalledTimes(1);
+    });
   });
 });

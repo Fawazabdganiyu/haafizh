@@ -591,9 +591,17 @@ export class ProjectContactLinkService {
    * notification fetch) that make a clean tx-composable extraction riskier
    * for this pass. Every other path in this feature is fully atomic.
    */
-  async updateContactOriginated(userId: string, input: UpdateTransactionInput) {
+  async updateContactOriginated(
+    userId: string,
+    input: UpdateTransactionInput,
+    orgId: string | null = null,
+  ) {
     const { projectId } = input;
-    const existing = await this.transactionsService.findOne(input.id, userId);
+    const existing = await this.transactionsService.findOne(
+      input.id,
+      userId,
+      orgId,
+    );
 
     if (existing.projectTransactionId) {
       // Already linked. The frontend always resends the current (locked)
@@ -621,6 +629,7 @@ export class ProjectContactLinkService {
         input.id,
         input,
         userId,
+        orgId,
       );
 
       // Keep the mirrored ProjectTransaction's amount and project.balance in
@@ -646,7 +655,7 @@ export class ProjectContactLinkService {
     }
 
     if (!projectId) {
-      return this.transactionsService.update(input.id, input, userId);
+      return this.transactionsService.update(input.id, input, userId, orgId);
     }
 
     if (!existing.contactId) {
@@ -692,7 +701,7 @@ export class ProjectContactLinkService {
     });
 
     // Step 1: unchanged, existing update path (its own atomic transaction).
-    await this.transactionsService.update(input.id, input, userId);
+    await this.transactionsService.update(input.id, input, userId, orgId);
 
     // Step 2: separate transaction creating the mirror + linking back.
     // Documented trade-off (see approved plan §4): not atomic with Step 1.

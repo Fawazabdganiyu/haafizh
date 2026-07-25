@@ -396,7 +396,7 @@ export class ContactsService {
   async getBalance(contactId: string, userId: string): Promise<number> {
     const contact = await this.prisma.contact.findUnique({
       where: { id: contactId },
-      select: { linkedUserId: true },
+      select: { linkedUserId: true, orgId: true },
     });
 
     const conversionsSelect = {
@@ -435,14 +435,19 @@ export class ContactsService {
     // Shared-ledger reverse side: transactions the linked platform user
     // created against *their own* contact-record naming this user back —
     // always flipped, since it's literally the other party's view of the
-    // same relationship.
-    if (contact?.linkedUserId) {
+    // same relationship. Personal contacts only: an org contact's
+    // linkedUserId is copied over by promoteContactToOrg for perspective
+    // flipping on transactions *within that org*, not an invitation to
+    // pull in the linked user's unrelated private personal-ledger activity
+    // with a third party into a balance shown to other org members.
+    if (!contact?.orgId && contact?.linkedUserId) {
       const reverseTransactions = await this.prisma.transaction.findMany({
         where: {
           createdById: contact.linkedUserId,
           contact: { linkedUserId: userId },
           category: AssetCategory.FUNDS,
           status: { not: 'CANCELLED' },
+          orgId: null,
         },
         select: {
           type: true,

@@ -509,6 +509,176 @@ describe('TransactionsService - Pagination', () => {
     });
   });
 
+  describe('TransactionsService — org-membership access on findOne/update/remove', () => {
+    let accessService: TransactionsService;
+    let accessPrisma: {
+      transaction: {
+        findUnique: jest.Mock;
+        findMany: jest.Mock;
+        update: jest.Mock;
+        delete: jest.Mock;
+      };
+      organisationMember: { findUnique: jest.Mock };
+      contact: { findUnique: jest.Mock };
+      transactionHistory: { create: jest.Mock };
+      witness: { updateMany: jest.Mock };
+      user: { findUnique: jest.Mock };
+      $transaction: jest.Mock;
+    };
+
+    const orgRow = {
+      id: 'org-tx-1',
+      createdById: 'fawaz',
+      orgId: 'org1',
+      contactId: 'contact-1',
+      contact: { linkedUserId: null },
+      type: TransactionType.LOAN_GIVEN,
+      category: AssetCategory.FUNDS,
+      status: TransactionStatus.PENDING,
+      amount: 1000,
+      currency: 'NGN',
+      parentId: null,
+      projectTransactionId: null,
+      isMirroredFromProject: false,
+      orgSourceTransactionId: null,
+      personalMirror: null,
+      witnesses: [],
+      history: [],
+      conversions: [],
+    };
+
+    const personalRow = {
+      ...orgRow,
+      id: 'personal-tx-1',
+      orgId: null,
+    };
+
+    beforeEach(async () => {
+      accessPrisma = {
+        transaction: {
+          findUnique: jest.fn(),
+          findMany: jest.fn().mockResolvedValue([]),
+          update: jest.fn(),
+          delete: jest.fn(),
+        },
+        organisationMember: { findUnique: jest.fn() },
+        contact: { findUnique: jest.fn() },
+        transactionHistory: { create: jest.fn() },
+        witness: { updateMany: jest.fn() },
+        user: { findUnique: jest.fn() },
+        $transaction: jest.fn((fn) => fn(accessPrisma)),
+      };
+      const module = await Test.createTestingModule({
+        providers: [
+          TransactionsService,
+          { provide: PrismaService, useValue: accessPrisma },
+          { provide: ConfigService, useValue: mockConfigService },
+          { provide: CACHE_MANAGER, useValue: mockCacheManager },
+          { provide: NotificationService, useValue: mockNotificationService },
+          { provide: ExchangeRateService, useValue: mockExchangeRateService },
+          {
+            provide: InAppNotificationsService,
+            useValue: mockInAppNotificationsService,
+          },
+        ],
+      }).compile();
+      accessService = module.get(TransactionsService);
+    });
+
+    it('grants a non-creator active member of the same org read access to an org transaction', async () => {
+      accessPrisma.transaction.findUnique.mockResolvedValue(orgRow);
+      accessPrisma.organisationMember.findUnique.mockResolvedValue({
+        id: 'mem-1',
+        role: 'OPERATOR',
+      });
+
+      const result = await accessService.findOne('org-tx-1', 'bello', 'org1');
+      expect(result.id).toBe('org-tx-1');
+    });
+
+    it('rejects a non-member of the org from reading an org transaction', async () => {
+      accessPrisma.transaction.findUnique.mockResolvedValue(orgRow);
+      accessPrisma.organisationMember.findUnique.mockResolvedValue(null);
+
+      await expect(
+        accessService.findOne('org-tx-1', 'stranger', 'org1'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects a personal-mode caller (no active org) from reading an org transaction', async () => {
+      accessPrisma.transaction.findUnique.mockResolvedValue(orgRow);
+
+      await expect(
+        accessService.findOne('org-tx-1', 'bello', null),
+      ).rejects.toThrow(ForbiddenException);
+      expect(accessPrisma.organisationMember.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('lets a non-creator active org member update an org transaction', async () => {
+      accessPrisma.transaction.findUnique.mockResolvedValue(orgRow);
+      accessPrisma.organisationMember.findUnique.mockResolvedValue({
+        id: 'mem-1',
+        role: 'OPERATOR',
+      });
+      accessPrisma.transaction.update.mockResolvedValue({
+        ...orgRow,
+        description: 'updated',
+      });
+
+      await expect(
+        accessService.update(
+          'org-tx-1',
+          { id: 'org-tx-1', description: 'updated' },
+          'bello',
+          'org1',
+        ),
+      ).resolves.toBeDefined();
+    });
+
+    it('lets a non-creator active org member remove an org transaction', async () => {
+      accessPrisma.transaction.findUnique.mockResolvedValue(orgRow);
+      accessPrisma.organisationMember.findUnique.mockResolvedValue({
+        id: 'mem-1',
+        role: 'OPERATOR',
+      });
+      accessPrisma.transaction.delete.mockResolvedValue(orgRow);
+
+      await expect(
+        accessService.remove('org-tx-1', 'bello', 'org1'),
+      ).resolves.toBeDefined();
+    });
+
+    it('still rejects a non-creator, non-linked user from updating a personal transaction', async () => {
+      accessPrisma.transaction.findUnique.mockResolvedValue(personalRow);
+
+      await expect(
+        accessService.update(
+          'personal-tx-1',
+          { id: 'personal-tx-1', description: 'updated' },
+          'someone-else',
+          null,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('still rejects the linked contact (not the creator) from updating a personal transaction they can view', async () => {
+      const linkedRow = {
+        ...personalRow,
+        contact: { linkedUserId: 'linked-user' },
+      };
+      accessPrisma.transaction.findUnique.mockResolvedValue(linkedRow);
+
+      await expect(
+        accessService.update(
+          'personal-tx-1',
+          { id: 'personal-tx-1', description: 'updated' },
+          'linked-user',
+          null,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
   describe('findMyContactTransactions with pagination', () => {
     it('should return { items, total, page, limit }', async () => {
       const totalCount = 30;

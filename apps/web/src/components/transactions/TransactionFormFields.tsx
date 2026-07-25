@@ -30,6 +30,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { type SelectedWitness, WitnessSelector } from "@/components/witnesses/WitnessSelector";
 import { useActiveOrg } from "@/hooks/use-active-org";
+import { useAuth } from "@/hooks/use-auth";
 import { useAmountInput } from "@/hooks/useAmountInput";
 import { useContacts } from "@/hooks/useContacts";
 import { useProjects } from "@/hooks/useProjects";
@@ -180,6 +181,7 @@ export function TransactionFormFields({
   const { contacts, loading: loadingContacts } = useContacts();
   const { projects, loading: loadingProjects } = useProjects();
   const { isOrgMode } = useActiveOrg();
+  const { user } = useAuth();
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [isShareContactDialogOpen, setIsShareContactDialogOpen] = useState(false);
   const [newlyCreatedContact, setNewlyCreatedContact] = useState<{
@@ -205,12 +207,17 @@ export function TransactionFormFields({
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
   // Create-time only — recordOnPersonalLedger can't be retroactively attached
   // to an existing transaction via update(), so there's nothing meaningful
-  // to show once the transaction already exists.
+  // to show once the transaction already exists. Also only for the member
+  // who actually shared the contact in — the backend silently no-ops the
+  // mirror for anyone else (it can't write onto a personal ledger it
+  // doesn't own), so showing a checked, promise-labelled toggle to another
+  // member would be a lie the UI tells on the backend's behalf.
   const showPersonalLedgerToggle =
     mode === "create" &&
     isOrgMode &&
     !isLocked("recordOnPersonalLedger") &&
-    !!selectedContact?.sourceContactId;
+    !!selectedContact?.sourceContactId &&
+    selectedContact?.sharedBy?.id === user?.id;
 
   return (
     <>

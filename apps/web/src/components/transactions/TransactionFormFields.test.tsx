@@ -10,11 +10,13 @@ import {
   transactionFormSchema,
 } from "@/components/transactions/TransactionFormFields";
 import { useActiveOrg } from "@/hooks/use-active-org";
+import { useAuth } from "@/hooks/use-auth";
 import { useContacts } from "@/hooks/useContacts";
 import { useProjects } from "@/hooks/useProjects";
 import { AssetCategory, TransactionType } from "@/types/__generated__/graphql";
 
 vi.mock("@/hooks/use-active-org", () => ({ useActiveOrg: vi.fn() }));
+vi.mock("@/hooks/use-auth", () => ({ useAuth: vi.fn() }));
 vi.mock("@/hooks/useContacts", () => ({ useContacts: vi.fn() }));
 vi.mock("@/hooks/useProjects", () => ({ useProjects: vi.fn() }));
 
@@ -33,11 +35,14 @@ vi.mock("@/components/witnesses/WitnessSelector", () => ({
 
 const SHARED_CONTACT_ID = "shared-contact-1";
 const PLAIN_CONTACT_ID = "plain-contact-1";
+const SHARED_BY_OTHER_CONTACT_ID = "shared-by-other-1";
+const CURRENT_USER_ID = "current-user-1";
+const OTHER_MEMBER_ID = "other-member-1";
 
 const mockContacts = [
   {
     id: SHARED_CONTACT_ID,
-    name: "Aisha (shared)",
+    name: "Aisha (shared by me)",
     email: null,
     phoneNumber: null,
     balance: 0,
@@ -47,6 +52,7 @@ const mockContacts = [
     createdAt: new Date().toISOString(),
     orgId: "org-1",
     sourceContactId: "personal-source-1",
+    sharedBy: { id: CURRENT_USER_ID, firstName: "Me", lastName: "Sharer" },
   },
   {
     id: PLAIN_CONTACT_ID,
@@ -60,6 +66,21 @@ const mockContacts = [
     createdAt: new Date().toISOString(),
     orgId: "org-1",
     sourceContactId: null,
+    sharedBy: null,
+  },
+  {
+    id: SHARED_BY_OTHER_CONTACT_ID,
+    name: "Chidi (shared by someone else)",
+    email: null,
+    phoneNumber: null,
+    balance: 0,
+    isOnPlatform: false,
+    isSupporter: false,
+    hasPendingInvitation: false,
+    createdAt: new Date().toISOString(),
+    orgId: "org-1",
+    sourceContactId: "personal-source-2",
+    sharedBy: { id: OTHER_MEMBER_ID, firstName: "Other", lastName: "Member" },
   },
 ];
 
@@ -109,6 +130,10 @@ describe("TransactionFormFields — org-mode contact sharing", () => {
       projects: [],
       loading: false,
     } as unknown as ReturnType<typeof useProjects>);
+
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: CURRENT_USER_ID },
+    } as unknown as ReturnType<typeof useAuth>);
   });
 
   it('does NOT render "From My Contacts" in personal mode', () => {
@@ -170,5 +195,17 @@ describe("TransactionFormFields — org-mode contact sharing", () => {
     render(<Harness contactId={SHARED_CONTACT_ID} />);
 
     expect(screen.getByText(/Also record on my personal ledger/i)).toBeInTheDocument();
+  });
+
+  it("does not render the personal-ledger toggle for a contact shared by a different member — the mirror would silently no-op", () => {
+    vi.mocked(useActiveOrg).mockReturnValue({
+      activeOrg: { id: "org-1", name: "Acme", slug: "acme" } as never,
+      isOrgMode: true,
+      switchToOrg: vi.fn(),
+    });
+
+    render(<Harness contactId={SHARED_BY_OTHER_CONTACT_ID} />);
+
+    expect(screen.queryByText(/Also record on my personal ledger/i)).not.toBeInTheDocument();
   });
 });

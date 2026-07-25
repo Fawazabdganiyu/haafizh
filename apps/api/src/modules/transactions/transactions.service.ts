@@ -498,9 +498,13 @@ export class TransactionsService {
       // was mirrored, and always inherit that mirror's contact/parent.
       const parentMirror = await prisma.transaction.findUnique({
         where: { orgSourceTransactionId: parentId },
-        select: { id: true, contactId: true },
+        select: { id: true, contactId: true, createdById: true },
       });
       if (!parentMirror) return;
+      // The mirror belongs to whichever member originally shared the
+      // contact and reflected the parent loan — never let a *different*
+      // org member's repayment/remittance/gift-conversion write onto it.
+      if (parentMirror.createdById !== userId) return;
       personalContactId = parentMirror.contactId ?? undefined;
       mirrorParentId = parentMirror.id;
     } else {
@@ -1013,10 +1017,14 @@ export class TransactionsService {
     }
   }
 
-  async addWitness(addWitnessInput: AddWitnessInput, userId: string) {
+  async addWitness(
+    addWitnessInput: AddWitnessInput,
+    userId: string,
+    orgId: string | null = null,
+  ) {
     const { transactionId, witnessUserIds, witnessInvites } = addWitnessInput;
 
-    const transaction = await this.findOne(transactionId, userId);
+    const transaction = await this.findOne(transactionId, userId, orgId);
 
     if (transaction.isMirroredFromProject) {
       throw new BadRequestException(
@@ -1551,7 +1559,53 @@ export class TransactionsService {
     return result;
   }
 
-  async findOne(id: string, userId: string, flipPerspective = false) {
+  /**
+   * Org-scoped transactions (orgId set) are shared by every active member of
+   * that org — same shape as ContactsService.assertContactAccess. Personal
+   * transactions (orgId null) remain gated on creator-or-linked-contact.
+   */
+  private async assertTransactionAccess(
+    transaction: {
+      orgId: string | null;
+      createdById: string;
+      contact?: { linkedUserId: string | null } | null;
+    },
+    userId: string,
+    orgId: string | null,
+  ): Promise<void> {
+    if (transaction.orgId) {
+      if (transaction.orgId !== orgId) {
+        throw new ForbiddenException(
+          'You do not have permission to access this transaction',
+        );
+      }
+      const member = await this.prisma.organisationMember.findUnique({
+        where: { orgId_userId: { orgId: transaction.orgId, userId } },
+      });
+      if (!member) {
+        throw new ForbiddenException(
+          'You do not have permission to access this transaction',
+        );
+      }
+      return;
+    }
+
+    const isCreator = transaction.createdById === userId;
+    const isLinkedContact = transaction.contact?.linkedUserId === userId;
+
+    if (!isCreator && !isLinkedContact) {
+      throw new ForbiddenException(
+        'You do not have permission to access this transaction',
+      );
+    }
+  }
+
+  async findOne(
+    id: string,
+    userId: string,
+    orgId: string | null = null,
+    flipPerspective = false,
+  ) {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id },
       include: {
@@ -1585,14 +1639,7 @@ export class TransactionsService {
       throw new NotFoundException(`Transaction with ID ${id} not found`);
     }
 
-    const isCreator = transaction.createdById === userId;
-    const isLinkedContact = transaction.contact?.linkedUserId === userId;
-
-    if (!isCreator && !isLinkedContact) {
-      throw new ForbiddenException(
-        'You do not have permission to access this transaction',
-      );
-    }
+    await this.assertTransactionAccess(transaction, userId, orgId);
 
     return flipPerspective
       ? this.applyPerspective(transaction, userId)
@@ -1603,10 +1650,15 @@ export class TransactionsService {
     id: string,
     updateTransactionInput: UpdateTransactionInput,
     userId: string,
+    orgId: string | null = null,
   ) {
-    const transaction = await this.findOne(id, userId);
+    const transaction = await this.findOne(id, userId, orgId);
 
-    if (transaction.createdById !== userId) {
+    // Org-scoped transactions are shared by every active member of that org
+    // (already verified by findOne/assertTransactionAccess above) — personal
+    // transactions remain creator-only, so the other party in a shared
+    // ledger can view but not edit.
+    if (!transaction.orgId && transaction.createdById !== userId) {
       throw new ForbiddenException(
         'Only the creator can update this transaction',
       );
@@ -1723,6 +1775,17 @@ export class TransactionsService {
 
     // Validate contactId if it's being updated
     if (rest.contactId && rest.contactId !== transaction.contactId) {
+      // A mirror's contactId points at the sharer's personal source contact
+      // of the *current* org contact — reassigning the org side would leave
+      // the mirror pointing at the wrong (or a since-unshared) contact.
+      // Reflecting onto a different contact requires deleting this mirror
+      // and letting a fresh create() re-derive one; not supported in-place.
+      if (transaction.personalMirror) {
+        throw new BadRequestException(
+          'Cannot reassign the contact on a transaction that has a personal-ledger mirror. Remove and recreate it instead.',
+        );
+      }
+
       const contact = await this.prisma.contact.findUnique({
         where: { id: rest.contactId },
       });
@@ -1731,7 +1794,12 @@ export class TransactionsService {
         throw new NotFoundException(`Contact ${rest.contactId} not found`);
       }
 
-      if (contact.userId !== userId) {
+      // Org-scoped contacts are shared by every member of that org; personal
+      // contacts remain creator-only. Mirrors createWithClient's rule.
+      const contactAllowed = orgId
+        ? contact.orgId === orgId
+        : contact.userId === userId && contact.orgId === null;
+      if (!contactAllowed) {
         throw new ForbiddenException(
           'Cannot assign a transaction to a contact you do not own',
         );
@@ -1750,7 +1818,12 @@ export class TransactionsService {
         );
       }
 
-      if (parent.createdById !== userId) {
+      // Org-scoped parents are shared by every member of that org; personal
+      // parents remain creator-only. Mirrors createWithClient's rule.
+      const parentAllowed = parent.orgId
+        ? parent.orgId === orgId
+        : parent.createdById === userId;
+      if (!parentAllowed) {
         throw new ForbiddenException(
           'Cannot link to a transaction you do not own',
         );
@@ -1898,6 +1971,18 @@ export class TransactionsService {
           if (changes.description !== undefined)
             mirrorChanges.description = changes.description;
           if (changes.type !== undefined) mirrorChanges.type = changes.type;
+          if (changes.currency !== undefined)
+            mirrorChanges.currency = changes.currency;
+          if (changes.category !== undefined)
+            mirrorChanges.category = changes.category;
+          if (changes.itemName !== undefined)
+            mirrorChanges.itemName = changes.itemName;
+          if (changes.quantity !== undefined)
+            mirrorChanges.quantity = changes.quantity;
+          // contactId is deliberately never forwarded — the mirror's
+          // contactId points at the personal source contact and is
+          // rejected outright by the reassignment guard above whenever a
+          // mirror exists, so `changes.contactId` can never be set here.
 
           if (Object.keys(mirrorChanges).length > 0) {
             await (prisma as Prisma.TransactionClient).transaction.update({
@@ -2012,10 +2097,13 @@ export class TransactionsService {
     });
   }
 
-  async remove(id: string, userId: string) {
-    const transaction = await this.findOne(id, userId);
+  async remove(id: string, userId: string, orgId: string | null = null) {
+    const transaction = await this.findOne(id, userId, orgId);
 
-    if (transaction.createdById !== userId) {
+    // Org-scoped transactions are shared by every active member of that org
+    // (already verified by findOne/assertTransactionAccess above) — personal
+    // transactions remain creator-only.
+    if (!transaction.orgId && transaction.createdById !== userId) {
       throw new ForbiddenException(
         'Only the creator can remove this transaction',
       );

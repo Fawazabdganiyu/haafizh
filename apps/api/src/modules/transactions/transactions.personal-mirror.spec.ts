@@ -72,6 +72,9 @@ const mockPrismaService = {
   user: {
     findUnique: jest.fn(),
   },
+  organisationMember: {
+    findUnique: jest.fn(),
+  },
   transactionHistory: {
     create: jest.fn(),
   },
@@ -257,6 +260,7 @@ describe('TransactionsService — personal-ledger mirror (maybeCreatePersonalMir
       const mirrorParent = {
         id: 'mirror-parent-1',
         contactId: PERSONAL_CONTACT_ID,
+        createdById: CREATOR_ID,
         amount: 1000,
         status: 'PENDING',
         type: TransactionType.LOAN_RECEIVED,
@@ -376,6 +380,67 @@ describe('TransactionsService — personal-ledger mirror (maybeCreatePersonalMir
 
       expect(mockPrismaService.transaction.create).toHaveBeenCalledTimes(1);
     });
+
+    it("does NOT mirror a repayment onto a different member's personal ledger — the parent mirror belongs to whoever originally shared the contact, not the caller", async () => {
+      const orgParentLoan = {
+        id: 'org-parent-3',
+        orgId: ORG_ID,
+        contactId: ORG_CONTACT_ID,
+        type: TransactionType.LOAN_RECEIVED,
+        category: AssetCategory.FUNDS,
+        currency: 'NGN',
+        amount: 1000,
+        createdById: CREATOR_ID,
+      };
+      // The mirror was created by CREATOR_ID when they shared the contact —
+      // OTHER_MEMBER_ID is a different org member recording this repayment.
+      const mirrorParent = {
+        id: 'mirror-parent-3',
+        contactId: PERSONAL_CONTACT_ID,
+        createdById: CREATOR_ID,
+        amount: 1000,
+        status: 'PENDING',
+        type: TransactionType.LOAN_RECEIVED,
+      };
+      mockPrismaService.transaction.findUnique.mockImplementation(
+        ({
+          where,
+        }: {
+          where: { id?: string; orgSourceTransactionId?: string };
+        }) => {
+          if (where.id === 'org-parent-3')
+            return Promise.resolve(orgParentLoan);
+          if (where.orgSourceTransactionId === 'org-parent-3')
+            return Promise.resolve(mirrorParent);
+          return Promise.resolve(null);
+        },
+      );
+      jest
+        .spyOn(
+          service as unknown as {
+            recomputeParentLoanStatus: (...args: unknown[]) => Promise<void>;
+          },
+          'recomputeParentLoanStatus',
+        )
+        .mockResolvedValue(undefined);
+
+      await service.create(
+        {
+          type: TransactionType.REPAYMENT_MADE,
+          category: AssetCategory.FUNDS,
+          amount: 400,
+          currency: 'NGN',
+          parentId: 'org-parent-3',
+          date: TX_DATE,
+        },
+        OTHER_MEMBER_ID,
+        ORG_ID,
+      );
+
+      // Only the org repayment is created — no mirror write onto CREATOR_ID's
+      // personal contact on OTHER_MEMBER_ID's behalf.
+      expect(mockPrismaService.transaction.create).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('guards against operating on a mirror row directly', () => {
@@ -485,17 +550,117 @@ describe('TransactionsService — personal-ledger mirror (maybeCreatePersonalMir
         ...orgRow,
         amount: 1500,
       });
+      mockPrismaService.organisationMember.findUnique.mockResolvedValue({
+        id: 'mem-1',
+        role: 'OPERATOR',
+      });
 
       await service.update(
         'org-tx-2',
         { id: 'org-tx-2', amount: 1500 },
         CREATOR_ID,
+        ORG_ID,
       );
 
       expect(mockPrismaService.transaction.update).toHaveBeenCalledWith({
         where: { id: 'mirror-2' },
         data: expect.objectContaining({ amount: 1500 }),
       });
+    });
+
+    it('propagates currency/category/itemName/quantity edits from the org row onto its personal mirror', async () => {
+      const orgRow = {
+        id: 'org-tx-5',
+        createdById: CREATOR_ID,
+        contactId: ORG_CONTACT_ID,
+        type: TransactionType.LOAN_GIVEN,
+        category: AssetCategory.FUNDS,
+        status: 'PENDING',
+        amount: 1000,
+        currency: 'NGN',
+        orgId: ORG_ID,
+        orgSourceTransactionId: null,
+        parentId: null,
+        projectTransactionId: null,
+        isMirroredFromProject: false,
+        contact: { linkedUserId: null },
+        witnesses: [],
+        history: [],
+        conversions: [],
+        personalMirror: { id: 'mirror-5', parentId: null },
+      };
+      mockPrismaService.transaction.findUnique.mockImplementation(
+        ({ where }: { where: { id?: string } }) => {
+          if (where.id === 'org-tx-5') return Promise.resolve(orgRow);
+          return Promise.resolve(null);
+        },
+      );
+      mockPrismaService.transaction.update.mockResolvedValue({
+        ...orgRow,
+        currency: 'USD',
+      });
+      mockPrismaService.organisationMember.findUnique.mockResolvedValue({
+        id: 'mem-1',
+        role: 'OPERATOR',
+      });
+
+      await service.update(
+        'org-tx-5',
+        { id: 'org-tx-5', currency: 'USD' },
+        CREATOR_ID,
+        ORG_ID,
+      );
+
+      // computeNetBalance groups by currency — a currency edit that isn't
+      // propagated leaves the two ledgers describing the same obligation in
+      // two different currency buckets.
+      expect(mockPrismaService.transaction.update).toHaveBeenCalledWith({
+        where: { id: 'mirror-5' },
+        data: expect.objectContaining({ currency: 'USD' }),
+      });
+    });
+
+    it('rejects reassigning the contact on a transaction that has a personal-ledger mirror', async () => {
+      const orgRow = {
+        id: 'org-tx-6',
+        createdById: CREATOR_ID,
+        contactId: ORG_CONTACT_ID,
+        type: TransactionType.LOAN_GIVEN,
+        category: AssetCategory.FUNDS,
+        status: 'PENDING',
+        amount: 1000,
+        currency: 'NGN',
+        orgId: ORG_ID,
+        orgSourceTransactionId: null,
+        parentId: null,
+        projectTransactionId: null,
+        isMirroredFromProject: false,
+        contact: { linkedUserId: null },
+        witnesses: [],
+        history: [],
+        conversions: [],
+        personalMirror: { id: 'mirror-6', parentId: null },
+      };
+      mockPrismaService.transaction.findUnique.mockImplementation(
+        ({ where }: { where: { id?: string } }) => {
+          if (where.id === 'org-tx-6') return Promise.resolve(orgRow);
+          return Promise.resolve(null);
+        },
+      );
+      mockPrismaService.organisationMember.findUnique.mockResolvedValue({
+        id: 'mem-1',
+        role: 'OPERATOR',
+      });
+
+      await expect(
+        service.update(
+          'org-tx-6',
+          { id: 'org-tx-6', contactId: 'some-other-contact' },
+          CREATOR_ID,
+          ORG_ID,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockPrismaService.transaction.update).not.toHaveBeenCalled();
     });
   });
 
@@ -528,8 +693,12 @@ describe('TransactionsService — personal-ledger mirror (maybeCreatePersonalMir
           return Promise.resolve(null);
         },
       );
+      mockPrismaService.organisationMember.findUnique.mockResolvedValue({
+        id: 'mem-1',
+        role: 'OPERATOR',
+      });
 
-      await service.remove('org-tx-3', CREATOR_ID);
+      await service.remove('org-tx-3', CREATOR_ID, ORG_ID);
 
       expect(mockPrismaService.transaction.delete).toHaveBeenCalledWith({
         where: { id: 'mirror-3' },
@@ -569,8 +738,12 @@ describe('TransactionsService — personal-ledger mirror (maybeCreatePersonalMir
         ...orgRow,
         status: 'CANCELLED',
       });
+      mockPrismaService.organisationMember.findUnique.mockResolvedValue({
+        id: 'mem-1',
+        role: 'OPERATOR',
+      });
 
-      await service.remove('org-tx-4', CREATOR_ID);
+      await service.remove('org-tx-4', CREATOR_ID, ORG_ID);
 
       expect(mockPrismaService.transaction.update).toHaveBeenCalledWith({
         where: { id: 'mirror-4' },
