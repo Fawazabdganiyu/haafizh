@@ -56,8 +56,25 @@ export const GET_TRANSACTION: TypedDocumentNode<TransactionQuery, TransactionQue
       quantity
       createdAt
       parentId
+      orgId
       projectTransactionId
       isMirroredFromProject
+      orgSourceTransactionId
+      orgSourceTransaction {
+        id
+        organisation {
+          id
+          name
+          slug
+        }
+        projectTransaction {
+          id
+          project {
+            id
+            name
+          }
+        }
+      }
       projectTransaction {
         id
         projectId
@@ -136,8 +153,25 @@ export const GET_TRANSACTIONS: TypedDocumentNode<TransactionsQuery, Transactions
         quantity
         createdAt
         parentId
+        orgId
         projectTransactionId
         isMirroredFromProject
+        orgSourceTransactionId
+        orgSourceTransaction {
+          id
+          organisation {
+            id
+            name
+            slug
+          }
+          projectTransaction {
+            id
+            project {
+              id
+              name
+            }
+          }
+        }
         projectTransaction {
           id
           projectId

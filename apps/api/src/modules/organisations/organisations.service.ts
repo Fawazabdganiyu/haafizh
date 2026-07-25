@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOrganisationInput } from './dto/create-organisation.input';
@@ -139,6 +140,16 @@ export class OrganisationsService {
     return true;
   }
 
+  /**
+   * Shares a personal contact into an org: creates (or returns an existing)
+   * org-owned copy linked back to the original via sourceContactId. Other
+   * org members can then select, transact against, and see this copy as a
+   * normal org contact (contacts.service.ts assertContactAccess grants
+   * access by org membership, not by who shared it in). The personal
+   * ledger/standing on the original contact is never touched — only a
+   * `recordOnPersonalLedger`-flagged transaction (transactions.service.ts)
+   * writes a real, separate row back onto it.
+   */
   async promoteContactToOrg(contactId: string, orgId: string, userId: string) {
     // Verify caller is a member of the target org
     const membership = await this.prisma.organisationMember.findUnique({
@@ -153,10 +164,19 @@ export class OrganisationsService {
       where: { id: contactId },
     });
     if (!contact) throw new NotFoundException('Contact not found');
+    if (contact.orgId)
+      throw new BadRequestException(
+        'This contact already belongs to an organisation and cannot be shared again',
+      );
     if (contact.userId !== userId)
       throw new ForbiddenException(
         'You do not have permission to access this contact',
       );
+
+    const existing = await this.prisma.contact.findUnique({
+      where: { orgId_sourceContactId: { orgId, sourceContactId: contactId } },
+    });
+    if (existing) return existing;
 
     return this.prisma.contact.create({
       data: {
@@ -164,8 +184,10 @@ export class OrganisationsService {
         lastName: contact.lastName,
         email: contact.email ?? undefined,
         phoneNumber: contact.phoneNumber ?? undefined,
+        linkedUserId: contact.linkedUserId ?? undefined,
         userId,
         orgId,
+        sourceContactId: contactId,
       },
     });
   }

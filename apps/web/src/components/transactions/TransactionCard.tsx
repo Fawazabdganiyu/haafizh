@@ -8,6 +8,7 @@ import {
   Package,
   UserCircle,
 } from "lucide-react";
+import { OrgAttributionBadge } from "@/components/transactions/OrgAttributionBadge";
 import { TransactionAmount } from "@/components/transactions/TransactionAmount";
 import { SupporterBadge } from "@/components/ui/supporter-badge";
 import { useAuth } from "@/hooks/use-auth";
@@ -40,6 +41,10 @@ interface TransactionCardProps {
       id: string;
       projectId: string;
       project?: { id: string; name: string } | null;
+    } | null;
+    orgSourceTransaction?: {
+      organisation?: { id: string; name: string } | null;
+      projectTransaction?: { project?: { id: string; name: string } | null } | null;
     } | null;
   };
   className?: string;
@@ -124,6 +129,7 @@ export function TransactionCard({ transaction: tx, className }: TransactionCardP
                   SHARED
                 </span>
               )}
+              <OrgAttributionBadge orgSourceTransaction={tx.orgSourceTransaction} />
               {isFromProject && tx.projectTransaction?.projectId && (
                 <button
                   type="button"

@@ -10,10 +10,12 @@ import type {
   GetContactsQueryVariables,
   InviteContactMutation,
   InviteContactMutationVariables,
-  UpdateContactMutation,
-  UpdateContactMutationVariables,
   ResendContactInvitationMutation,
   ResendContactInvitationMutationVariables,
+  ShareableContactsQuery,
+  ShareableContactsQueryVariables,
+  UpdateContactMutation,
+  UpdateContactMutationVariables,
 } from "@/types/__generated__/graphql";
 
 export const GET_CONTACTS: TypedDocumentNode<GetContactsQuery, GetContactsQueryVariables> = gql`
@@ -29,6 +31,13 @@ export const GET_CONTACTS: TypedDocumentNode<GetContactsQuery, GetContactsQueryV
         isSupporter
         hasPendingInvitation
         createdAt
+        orgId
+        sourceContactId
+        sharedBy {
+          id
+          firstName
+          lastName
+        }
       }
       total
       page
@@ -49,6 +58,33 @@ export const GET_CONTACT: TypedDocumentNode<GetContactQuery, GetContactQueryVari
       isSupporter
       hasPendingInvitation
       createdAt
+      orgId
+      sourceContactId
+      sharedBy {
+        id
+        firstName
+        lastName
+      }
+    }
+  }
+`;
+
+/** Candidates for "From my contacts" when recording an org transaction. */
+export const GET_SHAREABLE_CONTACTS: TypedDocumentNode<
+  ShareableContactsQuery,
+  ShareableContactsQueryVariables
+> = gql`
+  query ShareableContacts($filter: FilterContactInput) {
+    shareableContacts(filter: $filter) {
+      items {
+        id
+        name
+        email
+        phoneNumber
+      }
+      total
+      page
+      limit
     }
   }
 `;

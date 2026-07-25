@@ -28,6 +28,12 @@ export class Contact {
   @Field({ nullable: true })
   orgId?: string;
 
+  @Field({ nullable: true })
+  sourceContactId?: string;
+
+  @Field(() => User, { nullable: true })
+  sharedBy?: User;
+
   @Field()
   createdAt: Date;
 

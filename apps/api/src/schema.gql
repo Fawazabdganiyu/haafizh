@@ -126,6 +126,8 @@ type Contact {
   name: String!
   orgId: String
   phoneNumber: String
+  sharedBy: User
+  sourceContactId: String
   transactions: [Transaction!]
   user: User!
   userId: String!
@@ -231,6 +233,7 @@ input CreateTransactionInput {
   parentId: ID
   projectId: ID
   quantity: Int = 1
+  recordOnPersonalLedger: Boolean
   type: TransactionType!
   witnessInvites: [WitnessInviteInput!]
   witnessUserIds: [ID!]
@@ -757,6 +760,7 @@ type Query {
   promise(id: String!): Promise!
   receivedAccessGrants: [AccessGrant!]!
   searchWitness(input: SearchWitnessInput!): WitnessCandidate
+  shareableContacts(filter: FilterContactInput): PaginatedContactsResponse!
   sharedData(grantId: String!): SharedDataEntity!
   support(id: ID!): Support!
   supportOptions(currency: String): [SupportOption!]!
@@ -890,6 +894,10 @@ type Transaction {
   id: ID!
   isMirroredFromProject: Boolean!
   itemName: String
+  orgId: String
+  orgSourceTransaction: Transaction
+  orgSourceTransactionId: String
+  organisation: Organisation
   parent: Transaction
   parentId: String
   projectTransaction: ProjectTransaction
@@ -1049,6 +1057,7 @@ input UpdateTransactionInput {
   parentId: ID
   projectId: ID
   quantity: Int = 1
+  recordOnPersonalLedger: Boolean
   type: TransactionType
   witnessInvites: [WitnessInviteInput!]
   witnessUserIds: [ID!]

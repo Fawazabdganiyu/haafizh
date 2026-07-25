@@ -18,6 +18,7 @@ import { PaginatedContactsResponse } from './entities/paginated-contacts-respons
 import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
+import { PrismaService } from '../../prisma/prisma.service';
 import {
   InviteContactResponse,
   ContactPlatformStatus,
@@ -29,7 +30,10 @@ import { ActiveOrg } from '../organisations/decorators/active-org.decorator';
 @Resolver(() => Contact)
 @UseGuards(GqlAuthGuard)
 export class ContactsResolver {
-  constructor(private readonly contactsService: ContactsService) {}
+  constructor(
+    private readonly contactsService: ContactsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Mutation(() => Contact)
   @CheckFeature('maxContacts')
@@ -51,12 +55,23 @@ export class ContactsResolver {
     return this.contactsService.findAll(user.id, orgId, filter);
   }
 
+  /** Candidates for "From my contacts" when recording an org transaction. */
+  @Query(() => PaginatedContactsResponse, { name: 'shareableContacts' })
+  shareableContacts(
+    @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
+    @Args('filter', { nullable: true }) filter?: FilterContactInput,
+  ) {
+    return this.contactsService.findShareable(user.id, orgId, filter);
+  }
+
   @Query(() => Contact, { name: 'contact' })
   findOne(
     @Args('id', { type: () => ID }) id: string,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
-    return this.contactsService.findOne(id, user.id);
+    return this.contactsService.findOne(id, user.id, orgId);
   }
 
   @ResolveField(() => String)
@@ -71,6 +86,22 @@ export class ContactsResolver {
   @ResolveField(() => Number)
   async balance(@Parent() contact: Contact, @CurrentUser() user: User) {
     return this.contactsService.getBalance(contact.id, user.id);
+  }
+
+  /**
+   * Populated only when this contact is a `sourceContactId`-linked copy
+   * shared into an org — the "Shared by <name>" provenance line. The
+   * sharer is whoever's `userId` owns the org copy (promoteContactToOrg
+   * sets it to the caller who ran the share), not the source contact's
+   * own owner, which other members should never see.
+   */
+  @ResolveField(() => User, { nullable: true })
+  async sharedBy(@Parent() contact: Contact): Promise<User | null> {
+    if (!contact.sourceContactId) return null;
+    const user = await this.prisma.user.findUnique({
+      where: { id: contact.userId },
+    });
+    return user as unknown as User | null;
   }
 
   @ResolveField(() => Boolean)
@@ -116,11 +147,13 @@ export class ContactsResolver {
   updateContact(
     @Args('updateContactInput') updateContactInput: UpdateContactInput,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
     return this.contactsService.update(
       updateContactInput.id,
       updateContactInput,
       user.id,
+      orgId,
     );
   }
 
@@ -128,31 +161,48 @@ export class ContactsResolver {
   removeContact(
     @Args('id', { type: () => ID }) id: string,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
-    return this.contactsService.remove(id, user.id);
+    return this.contactsService.remove(id, user.id, orgId);
   }
 
   @Mutation(() => InviteContactResponse)
   inviteContactToPlatform(
     @Args('contactId', { type: () => ID }) contactId: string,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
-    return this.contactsService.inviteContactToPlatform(contactId, user.id);
+    return this.contactsService.inviteContactToPlatform(
+      contactId,
+      user.id,
+      orgId,
+    );
   }
 
   @Mutation(() => InviteContactResponse)
   resendContactInvitation(
     @Args('contactId', { type: () => ID }) contactId: string,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
-    return this.contactsService.resendContactInvitation(contactId, user.id);
+    return this.contactsService.resendContactInvitation(
+      contactId,
+      user.id,
+      orgId,
+    );
   }
 
   @Query(() => ContactPlatformStatus)
   checkContactOnPlatform(
     @Args('contactId', { type: () => ID }) contactId: string,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
-    return this.contactsService.checkContactOnPlatform(contactId, user.id);
+    return this.contactsService.checkContactOnPlatform(
+      contactId,
+      user.id,
+      undefined,
+      orgId,
+    );
   }
 }

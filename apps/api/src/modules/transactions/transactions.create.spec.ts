@@ -19,6 +19,7 @@ const mockContact = {
   phoneNumber: '+2348099999999',
   email: 'aminu@example.com',
   linkedUserId: null,
+  orgId: null,
   createdAt: new Date(),
 };
 

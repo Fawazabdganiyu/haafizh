@@ -22,6 +22,9 @@ export interface ContactSummary {
   hasPendingInvitation?: boolean;
   lentCount?: number;
   borrowedCount?: number;
+  /** Set only when this org contact is a shared copy of a personal contact. */
+  sourceContactId?: string | null;
+  sharedBy?: { firstName?: string | null; lastName?: string | null } | null;
 }
 
 interface ContactCardProps<T extends ContactSummary = ContactSummary> {
@@ -80,6 +83,11 @@ export function ContactCard<T extends ContactSummary>({
           <p className="text-[12px] text-muted-foreground truncate mt-0.5 opacity-70">
             {contact.email || contact.phoneNumber || "No contact info"}
           </p>
+          {contact.sourceContactId && contact.sharedBy && (
+            <p className="text-[10px] text-muted-foreground truncate mt-0.5 opacity-60 italic">
+              Shared by {contact.sharedBy.firstName} {contact.sharedBy.lastName}
+            </p>
+          )}
         </div>
 
         {/* Three-dot menu */}

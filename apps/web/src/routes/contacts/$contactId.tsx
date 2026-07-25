@@ -16,6 +16,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { ContactSummaryCards } from "@/components/contacts/ContactSummaryCards";
+import { OrgAttributionBadge } from "@/components/transactions/OrgAttributionBadge";
 import { TransactionAmount } from "@/components/transactions/TransactionAmount";
 import { TransactionTypeBadge } from "@/components/transactions/TransactionTypeBadge";
 import { TransactionTypeHelp } from "@/components/transactions/TransactionTypeHelp";
@@ -198,6 +199,11 @@ function ContactDetailsPage() {
             {contact.email && <span className="truncate">{contact.email}</span>}
             {contact.phoneNumber && <span>{contact.phoneNumber}</span>}
           </div>
+          {contact.sourceContactId && contact.sharedBy && (
+            <p className="text-xs text-muted-foreground italic mt-1">
+              Shared by {contact.sharedBy.firstName} {contact.sharedBy.lastName}
+            </p>
+          )}
           {/* Primary action — left-aligned, sits naturally below contact details */}
           <Button asChild size="sm" className="mt-3">
             <Link to="/transactions/new" search={{ contactId: contact.id }}>
@@ -364,6 +370,7 @@ function ContactDetailsPage() {
                                   {tx.projectTransaction.project?.name ?? "Project"}
                                 </Link>
                               )}
+                              <OrgAttributionBadge orgSourceTransaction={tx.orgSourceTransaction} />
                             </div>
                           </TableCell>
                           <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground/90">
@@ -453,6 +460,7 @@ function ContactDetailsPage() {
                                   {tx.projectTransaction.project?.name ?? "Project"}
                                 </Link>
                               )}
+                              <OrgAttributionBadge orgSourceTransaction={tx.orgSourceTransaction} />
                             </div>
                           </div>
                           <div className="text-right">

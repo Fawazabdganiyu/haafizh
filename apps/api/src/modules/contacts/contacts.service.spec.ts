@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { ForbiddenException, BadRequestException } from '@nestjs/common';
 import { ContactsService } from './contacts.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationService } from '../notifications/notification.service';
@@ -10,6 +11,13 @@ describe('ContactsService — findAll pagination', () => {
     contact: {
       findMany: jest.Mock;
       count: jest.Mock;
+      findUnique: jest.Mock;
+    };
+    organisationMember: {
+      findUnique: jest.Mock;
+    };
+    transaction: {
+      findMany: jest.Mock;
     };
   };
 
@@ -18,6 +26,13 @@ describe('ContactsService — findAll pagination', () => {
       contact: {
         findMany: jest.fn(),
         count: jest.fn(),
+        findUnique: jest.fn(),
+      },
+      organisationMember: {
+        findUnique: jest.fn(),
+      },
+      transaction: {
+        findMany: jest.fn(),
       },
     };
 
@@ -205,6 +220,182 @@ describe('ContactsService — findAll pagination', () => {
           where: expect.objectContaining({ userId: 'user1', orgId: null }),
         }),
       );
+    });
+  });
+
+  describe('ContactsService — org-aware access (assertContactAccess via findOne)', () => {
+    const orgContact = {
+      id: 'oc1',
+      orgId: 'org1',
+      userId: 'sharer-1',
+      linkedUserId: null,
+      transactions: [],
+      user: {},
+    };
+    const personalContact = {
+      id: 'pc1',
+      orgId: null,
+      userId: 'owner-1',
+      linkedUserId: null,
+      transactions: [],
+      user: {},
+    };
+
+    it('grants any active member of the same org access to an org contact, regardless of who created it', async () => {
+      prisma.contact.findUnique.mockResolvedValue(orgContact);
+      prisma.organisationMember.findUnique.mockResolvedValue({
+        id: 'mem1',
+        role: 'OPERATOR',
+      });
+
+      const result = await service.findOne('oc1', 'other-member', 'org1');
+      expect(result.id).toBe('oc1');
+      expect(prisma.organisationMember.findUnique).toHaveBeenCalledWith({
+        where: { orgId_userId: { orgId: 'org1', userId: 'other-member' } },
+      });
+    });
+
+    it('rejects a non-member of the org from accessing an org contact', async () => {
+      prisma.contact.findUnique.mockResolvedValue(orgContact);
+      prisma.organisationMember.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.findOne('oc1', 'not-a-member', 'org1'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects a personal-mode caller (no active org) from accessing an org contact', async () => {
+      prisma.contact.findUnique.mockResolvedValue(orgContact);
+
+      await expect(
+        service.findOne('oc1', 'other-member', null),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.organisationMember.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('rejects access to a personal contact from a different org context entirely', async () => {
+      prisma.contact.findUnique.mockResolvedValue(orgContact);
+
+      await expect(
+        service.findOne('oc1', 'other-member', 'different-org'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('still authorises a personal contact by owner-or-linked-user, unaffected by org scoping', async () => {
+      prisma.contact.findUnique.mockResolvedValue(personalContact);
+
+      const result = await service.findOne('pc1', 'owner-1', null);
+      expect(result.id).toBe('pc1');
+      expect(prisma.organisationMember.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('rejects a caller who neither owns nor is linked to a personal contact', async () => {
+      prisma.contact.findUnique.mockResolvedValue(personalContact);
+
+      await expect(
+        service.findOne('pc1', 'someone-else', null),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('ContactsService — findShareable', () => {
+    it('throws when there is no active org', async () => {
+      await expect(service.findShareable('user1', null, {})).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it("lists the caller's own personal contacts not yet shared into the active org", async () => {
+      prisma.contact.findMany.mockResolvedValue([
+        { id: 'pc1', firstName: 'Ali' },
+      ]);
+      prisma.contact.count.mockResolvedValue(1);
+
+      const result = await service.findShareable('user1', 'org1', {});
+
+      expect(result.items).toHaveLength(1);
+      expect(prisma.contact.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user1',
+            orgId: null,
+            derivedContacts: { none: { orgId: 'org1' } },
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('ContactsService — getBalance (multi-member org standing)', () => {
+    // Regression test: caught by the end-to-end scenario eval
+    // (transactions/__tests__/personal-mirror-scenario.spec.ts). getBalance
+    // used to flip the sign for any transaction not created by the *viewing*
+    // user, which was correct for the single-owner personal-contact case but
+    // wrong for a shared org contact — a second member viewing a loan that a
+    // *different* member recorded got an inverted balance.
+    it('does not flip the sign for a direct transaction created by a different org member than the viewer', async () => {
+      prisma.contact.findUnique.mockResolvedValue({ linkedUserId: null });
+      prisma.transaction.findMany.mockResolvedValue([
+        {
+          type: 'LOAN_RECEIVED',
+          amount: { toNumber: () => 100 },
+          parentId: null,
+          createdById: 'fawaz',
+          conversions: [],
+        },
+      ]);
+
+      // Bello (not the creator) views the same org contact's standing.
+      const balance = await service.getBalance('org-contact-1', 'bello');
+      expect(balance).toBe(-100); // same as the creator would see, not +100
+    });
+
+    it('still flips the sign for the true shared-ledger reverse-perspective case (linked platform user)', async () => {
+      prisma.contact.findUnique.mockResolvedValue({ linkedUserId: 'ahmad' });
+      prisma.transaction.findMany
+        .mockResolvedValueOnce([]) // direct rows on my own contact-of-Ahmad
+        .mockResolvedValueOnce([
+          // Ahmad's own contact-record-of-me shows he recorded a LOAN_GIVEN
+          {
+            type: 'LOAN_GIVEN',
+            amount: { toNumber: () => 100 },
+            parentId: null,
+            createdById: 'ahmad',
+            conversions: [],
+          },
+        ]);
+
+      const balance = await service.getBalance('my-contact-of-ahmad', 'me');
+      // From my perspective, Ahmad recording LOAN_GIVEN means I received a
+      // loan — flips to the LOAN_RECEIVED sign (-1).
+      expect(balance).toBe(-100);
+    });
+
+    it("does NOT pull in the linked platform user's unrelated private personal-ledger activity for an org contact", async () => {
+      // promoteContactToOrg copies linkedUserId onto the org copy (for
+      // perspective flipping on transactions *within that org*) — it must
+      // not also open the door to Aisha's private personal transactions
+      // with some other org member leaking into the org balance.
+      prisma.contact.findUnique.mockResolvedValue({
+        linkedUserId: 'aisha-user-id',
+        orgId: 'org-1',
+      });
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        {
+          type: 'LOAN_RECEIVED',
+          amount: { toNumber: () => 100 },
+          parentId: null,
+          createdById: 'fawaz',
+          conversions: [],
+        },
+      ]);
+
+      const balance = await service.getBalance('org-aisha-contact', 'bello');
+
+      expect(balance).toBe(-100);
+      // Only the direct-transactions query ran — no reverse-perspective
+      // query for an org contact, regardless of linkedUserId.
+      expect(prisma.transaction.findMany).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -67,7 +67,8 @@ export class ProjectContactLinkResolver {
   async updateTransaction(
     @Args('input') input: UpdateTransactionInput,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
-    return this.linkService.updateContactOriginated(user.id, input);
+    return this.linkService.updateContactOriginated(user.id, input, orgId);
   }
 }

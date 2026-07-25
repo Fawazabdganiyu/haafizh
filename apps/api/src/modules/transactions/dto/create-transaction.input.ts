@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsNumber,
+  IsBoolean,
   Min,
   IsArray,
   ValidateNested,
@@ -90,4 +91,16 @@ export class CreateTransactionInput {
   @ValidateNested({ each: true })
   @Type(() => WitnessInviteInput)
   witnessInvites?: WitnessInviteInput[];
+
+  /**
+   * Org-mode only: when the contact is a `sourceContactId`-linked copy of
+   * one of the caller's own personal contacts, also write a real, separate
+   * Transaction onto that personal contact's ledger (same type/amount,
+   * orgId null), linked back via `orgSourceTransactionId`. Ignored outside
+   * org mode or when the contact has no personal source of the caller's own.
+   */
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsBoolean()
+  recordOnPersonalLedger?: boolean;
 }
