@@ -53,6 +53,8 @@ export function EditTransactionDialog({
     if (transaction.projectTransactionId) {
       locks.push("projectId");
     }
+    // Create-time only — a mirror can't be retroactively attached via update().
+    locks.push("recordOnPersonalLedger");
     return locks;
   }, [transaction.type, transaction.parentId, transaction.projectTransactionId]);
 

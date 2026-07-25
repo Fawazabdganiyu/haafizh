@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { OrganisationsService } from './organisations.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
@@ -176,29 +177,74 @@ describe('OrganisationsService', () => {
   });
 
   describe('promoteContactToOrg', () => {
-    it('creates a new org-scoped contact from a personal contact', async () => {
+    it('creates a new org-scoped contact from a personal contact, carrying linkedUserId and sourceContactId', async () => {
       prisma.organisationMember.findUnique.mockResolvedValueOnce({
         id: 'mem1',
         role: OrgRole.OPERATOR,
       }); // membership check passes
-      prisma.contact.findUnique.mockResolvedValue({
-        id: 'c1',
-        firstName: 'Ali',
-        lastName: 'B',
-        email: 'ali@b.com',
-        phoneNumber: null,
-        userId: 'user1',
-        orgId: null,
-      });
+      prisma.contact.findUnique
+        .mockResolvedValueOnce({
+          id: 'c1',
+          firstName: 'Ali',
+          lastName: 'B',
+          email: 'ali@b.com',
+          phoneNumber: null,
+          userId: 'user1',
+          orgId: null,
+          linkedUserId: 'linked-user-1',
+        }) // fetch the contact being shared
+        .mockResolvedValueOnce(null); // dedupe check: no existing copy yet
       prisma.contact.create.mockResolvedValue({ id: 'c2', orgId: 'org1' });
 
       const result = await service.promoteContactToOrg('c1', 'org1', 'user1');
       expect(prisma.contact.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ orgId: 'org1', firstName: 'Ali' }),
+          data: expect.objectContaining({
+            orgId: 'org1',
+            firstName: 'Ali',
+            linkedUserId: 'linked-user-1',
+            sourceContactId: 'c1',
+          }),
         }),
       );
       expect(result.orgId).toBe('org1');
+    });
+
+    it('returns the existing org copy instead of creating a second one when re-promoted', async () => {
+      prisma.organisationMember.findUnique.mockResolvedValueOnce({
+        id: 'mem1',
+        role: OrgRole.OPERATOR,
+      });
+      const existingCopy = { id: 'c2', orgId: 'org1', sourceContactId: 'c1' };
+      prisma.contact.findUnique
+        .mockResolvedValueOnce({
+          id: 'c1',
+          firstName: 'Ali',
+          lastName: 'B',
+          userId: 'user1',
+          orgId: null,
+        })
+        .mockResolvedValueOnce(existingCopy); // dedupe check finds the prior copy
+
+      const result = await service.promoteContactToOrg('c1', 'org1', 'user1');
+      expect(prisma.contact.create).not.toHaveBeenCalled();
+      expect(result).toBe(existingCopy);
+    });
+
+    it('throws BadRequestException when the contact already belongs to an organisation', async () => {
+      prisma.organisationMember.findUnique.mockResolvedValueOnce({
+        id: 'mem1',
+        role: OrgRole.OPERATOR,
+      });
+      prisma.contact.findUnique.mockResolvedValueOnce({
+        id: 'c1',
+        userId: 'user1',
+        orgId: 'other-org',
+      });
+      await expect(
+        service.promoteContactToOrg('c1', 'org1', 'user1'),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.contact.create).not.toHaveBeenCalled();
     });
 
     it('throws ForbiddenException when contact does not belong to user', async () => {
@@ -206,9 +252,10 @@ describe('OrganisationsService', () => {
         id: 'mem1',
         role: OrgRole.OPERATOR,
       }); // membership check passes
-      prisma.contact.findUnique.mockResolvedValue({
+      prisma.contact.findUnique.mockResolvedValueOnce({
         id: 'c1',
         userId: 'other',
+        orgId: null,
       });
       await expect(
         service.promoteContactToOrg('c1', 'org1', 'user1'),

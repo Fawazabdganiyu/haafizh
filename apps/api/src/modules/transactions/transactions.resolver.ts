@@ -12,6 +12,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { TransactionsService } from './transactions.service';
 import { Transaction } from './entities/transaction.entity';
 import { ProjectTransaction } from '../projects/entities/project-transaction.entity';
+import { Organisation } from '../organisations/entities/organisation.entity';
 import { AddWitnessInput } from './dto/add-witness.input';
 import {
   TransactionsResponse,
@@ -90,6 +91,35 @@ export class TransactionsResolver {
     });
   }
 
+  /**
+   * Org attribution for personal-mirror rows and org rows alike — resolved
+   * on demand rather than requiring every query path to `include` it.
+   * Visibility is already enforced upstream: a viewer can only ever reach a
+   * transaction with orgId set via `findAll`/`findOne`'s own org-membership
+   * scoping, so no extra permission check is needed here.
+   */
+  @ResolveField(() => Organisation, { nullable: true })
+  async organisation(@Parent() transaction: Transaction) {
+    if (!transaction.orgId) return null;
+    return this.prisma.organisation.findUnique({
+      where: { id: transaction.orgId },
+    });
+  }
+
+  /**
+   * Populated only on a personal-ledger mirror row (orgSourceTransactionId
+   * set) — points back at the org transaction it reflects, so the frontend
+   * can render "On behalf of <org> · <project>" from
+   * orgSourceTransaction.organisation / orgSourceTransaction.projectTransaction.
+   */
+  @ResolveField(() => Transaction, { nullable: true })
+  async orgSourceTransaction(@Parent() transaction: Transaction) {
+    if (!transaction.orgSourceTransactionId) return null;
+    return this.prisma.transaction.findUnique({
+      where: { id: transaction.orgSourceTransactionId },
+    });
+  }
+
   @Query(() => TransactionsSummary, { name: 'totalBalance' })
   async getTotalBalance(
     @CurrentUser() user: User,
@@ -110,8 +140,9 @@ export class TransactionsResolver {
   async addWitness(
     @Args('input') addWitnessInput: AddWitnessInput,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
-    return this.transactionsService.addWitness(addWitnessInput, user.id);
+    return this.transactionsService.addWitness(addWitnessInput, user.id, orgId);
   }
 
   @Query(() => TransactionsResponse, { name: 'transactions' })
@@ -149,15 +180,17 @@ export class TransactionsResolver {
   async findOne(
     @Args('id', { type: () => ID }) id: string,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
-    return this.transactionsService.findOne(id, user.id, true);
+    return this.transactionsService.findOne(id, user.id, orgId, true);
   }
 
   @Mutation(() => Transaction)
   async removeTransaction(
     @Args('id', { type: () => ID }) id: string,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
-    return this.transactionsService.remove(id, user.id);
+    return this.transactionsService.remove(id, user.id, orgId);
   }
 }

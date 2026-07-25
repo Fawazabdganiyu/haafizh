@@ -41,6 +41,7 @@ function NewTransactionPage() {
       itemName: "",
       quantity: 1,
       witnesses: [],
+      recordOnPersonalLedger: true,
     },
   });
 
@@ -75,6 +76,7 @@ function NewTransactionPage() {
         quantity: values.category === AssetCategory.Item ? values.quantity : undefined,
         witnessUserIds,
         witnessInvites,
+        recordOnPersonalLedger: values.recordOnPersonalLedger,
       });
       toast.success("Transaction created successfully");
       navigate({

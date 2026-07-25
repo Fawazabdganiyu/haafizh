@@ -510,6 +510,7 @@ describe('ProjectContactLinkService', () => {
         'tx-1',
         expect.objectContaining({ description: 'updated description' }),
         USER_ID,
+        null,
       );
     });
 
@@ -541,6 +542,7 @@ describe('ProjectContactLinkService', () => {
         'tx-1',
         expect.objectContaining({ amount: 500 }),
         USER_ID,
+        null,
       );
       expect(
         mockProjectTransactionsService.syncMirroredAmount,

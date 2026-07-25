@@ -148,6 +148,8 @@ export type Contact = {
   name: Scalars['String']['output'];
   orgId: Maybe<Scalars['String']['output']>;
   phoneNumber: Maybe<Scalars['String']['output']>;
+  sharedBy: Maybe<User>;
+  sourceContactId: Maybe<Scalars['String']['output']>;
   transactions: Maybe<Array<Transaction>>;
   user: User;
   userId: Scalars['String']['output'];
@@ -255,6 +257,7 @@ export type CreateTransactionInput = {
   parentId?: InputMaybe<Scalars['ID']['input']>;
   projectId?: InputMaybe<Scalars['ID']['input']>;
   quantity?: InputMaybe<Scalars['Int']['input']>;
+  recordOnPersonalLedger?: InputMaybe<Scalars['Boolean']['input']>;
   type: TransactionType;
   witnessInvites?: InputMaybe<Array<WitnessInviteInput>>;
   witnessUserIds?: InputMaybe<Array<Scalars['ID']['input']>>;
@@ -1120,6 +1123,7 @@ export type Query = {
   promise: Promise;
   receivedAccessGrants: Array<AccessGrant>;
   searchWitness: Maybe<WitnessCandidate>;
+  shareableContacts: PaginatedContactsResponse;
   sharedData: SharedDataEntity;
   support: Support;
   supportOptions: Array<SupportOption>;
@@ -1245,6 +1249,11 @@ export type QueryPromiseArgs = {
 
 export type QuerySearchWitnessArgs = {
   input: SearchWitnessInput;
+};
+
+
+export type QueryShareableContactsArgs = {
+  filter?: InputMaybe<FilterContactInput>;
 };
 
 
@@ -1421,6 +1430,10 @@ export type Transaction = {
   id: Scalars['ID']['output'];
   isMirroredFromProject: Scalars['Boolean']['output'];
   itemName: Maybe<Scalars['String']['output']>;
+  orgId: Maybe<Scalars['String']['output']>;
+  orgSourceTransaction: Maybe<Transaction>;
+  orgSourceTransactionId: Maybe<Scalars['String']['output']>;
+  organisation: Maybe<Organisation>;
   parent: Maybe<Transaction>;
   parentId: Maybe<Scalars['String']['output']>;
   projectTransaction: Maybe<ProjectTransaction>;
@@ -1583,6 +1596,7 @@ export type UpdateTransactionInput = {
   parentId?: InputMaybe<Scalars['ID']['input']>;
   projectId?: InputMaybe<Scalars['ID']['input']>;
   quantity?: InputMaybe<Scalars['Int']['input']>;
+  recordOnPersonalLedger?: InputMaybe<Scalars['Boolean']['input']>;
   type?: InputMaybe<TransactionType>;
   witnessInvites?: InputMaybe<Array<WitnessInviteInput>>;
   witnessUserIds?: InputMaybe<Array<Scalars['ID']['input']>>;
@@ -1815,14 +1829,21 @@ export type GetContactsQueryVariables = Exact<{
 }>;
 
 
-export type GetContactsQuery = { contacts: { __typename: 'PaginatedContactsResponse', total: number, page: number, limit: number, items: Array<{ __typename: 'Contact', id: string, name: string, email: string | null, phoneNumber: string | null, balance: number, isOnPlatform: boolean, isSupporter: boolean, hasPendingInvitation: boolean, createdAt: string }> } };
+export type GetContactsQuery = { contacts: { __typename: 'PaginatedContactsResponse', total: number, page: number, limit: number, items: Array<{ __typename: 'Contact', id: string, name: string, email: string | null, phoneNumber: string | null, balance: number, isOnPlatform: boolean, isSupporter: boolean, hasPendingInvitation: boolean, createdAt: string, orgId: string | null, sourceContactId: string | null, sharedBy: { __typename: 'User', id: string, firstName: string, lastName: string } | null }> } };
 
 export type GetContactQueryVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
 
 
-export type GetContactQuery = { contact: { __typename: 'Contact', id: string, name: string, email: string | null, phoneNumber: string | null, balance: number, isOnPlatform: boolean, isSupporter: boolean, hasPendingInvitation: boolean, createdAt: string } };
+export type GetContactQuery = { contact: { __typename: 'Contact', id: string, name: string, email: string | null, phoneNumber: string | null, balance: number, isOnPlatform: boolean, isSupporter: boolean, hasPendingInvitation: boolean, createdAt: string, orgId: string | null, sourceContactId: string | null, sharedBy: { __typename: 'User', id: string, firstName: string, lastName: string } | null } };
+
+export type ShareableContactsQueryVariables = Exact<{
+  filter?: InputMaybe<FilterContactInput>;
+}>;
+
+
+export type ShareableContactsQuery = { shareableContacts: { __typename: 'PaginatedContactsResponse', total: number, page: number, limit: number, items: Array<{ __typename: 'Contact', id: string, name: string, email: string | null, phoneNumber: string | null }> } };
 
 export type InviteContactMutationVariables = Exact<{
   contactId: Scalars['ID']['input'];
@@ -2306,7 +2327,7 @@ export type TransactionQueryVariables = Exact<{
 }>;
 
 
-export type TransactionQuery = { transaction: { __typename: 'Transaction', id: string, amount: number | null, category: AssetCategory, type: TransactionType, status: TransactionStatus, currency: string, date: string, description: string | null, itemName: string | null, quantity: number | null, createdAt: string | null, parentId: string | null, projectTransactionId: string | null, isMirroredFromProject: boolean, projectTransaction: { __typename: 'ProjectTransaction', id: string, projectId: string, project: { __typename: 'Project', id: string, name: string } | null } | null, conversions: Array<{ __typename: 'Transaction', id: string, amount: number | null, type: TransactionType, currency: string, date: string, status: TransactionStatus }> | null, contact: { __typename: 'Contact', id: string, name: string, isSupporter: boolean } | null, witnesses: Array<{ __typename: 'Witness', id: string, status: WitnessStatus, invitedAt: string, acknowledgedAt: string | null, user: { __typename: 'User', id: string, name: string, email: string, isSupporter: boolean } | null }> | null, history: Array<{ __typename: 'TransactionHistory', id: string, changeType: string, previousState: Record<string, unknown>, newState: Record<string, unknown>, createdAt: string, user: { __typename: 'User', id: string, name: string, email: string, isSupporter: boolean } | null }> | null } };
+export type TransactionQuery = { transaction: { __typename: 'Transaction', id: string, amount: number | null, category: AssetCategory, type: TransactionType, status: TransactionStatus, currency: string, date: string, description: string | null, itemName: string | null, quantity: number | null, createdAt: string | null, parentId: string | null, orgId: string | null, projectTransactionId: string | null, isMirroredFromProject: boolean, orgSourceTransactionId: string | null, orgSourceTransaction: { __typename: 'Transaction', id: string, organisation: { __typename: 'Organisation', id: string, name: string, slug: string } | null, projectTransaction: { __typename: 'ProjectTransaction', id: string, project: { __typename: 'Project', id: string, name: string } | null } | null } | null, projectTransaction: { __typename: 'ProjectTransaction', id: string, projectId: string, project: { __typename: 'Project', id: string, name: string } | null } | null, conversions: Array<{ __typename: 'Transaction', id: string, amount: number | null, type: TransactionType, currency: string, date: string, status: TransactionStatus }> | null, contact: { __typename: 'Contact', id: string, name: string, isSupporter: boolean } | null, witnesses: Array<{ __typename: 'Witness', id: string, status: WitnessStatus, invitedAt: string, acknowledgedAt: string | null, user: { __typename: 'User', id: string, name: string, email: string, isSupporter: boolean } | null }> | null, history: Array<{ __typename: 'TransactionHistory', id: string, changeType: string, previousState: Record<string, unknown>, newState: Record<string, unknown>, createdAt: string, user: { __typename: 'User', id: string, name: string, email: string, isSupporter: boolean } | null }> | null } };
 
 export type RemoveTransactionMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -2320,7 +2341,7 @@ export type TransactionsQueryVariables = Exact<{
 }>;
 
 
-export type TransactionsQuery = { transactions: { __typename: 'TransactionsResponse', total: number, page: number, limit: number, items: Array<{ __typename: 'Transaction', id: string, amount: number | null, category: AssetCategory, type: TransactionType, status: TransactionStatus, currency: string, date: string, description: string | null, itemName: string | null, quantity: number | null, createdAt: string | null, parentId: string | null, projectTransactionId: string | null, isMirroredFromProject: boolean, projectTransaction: { __typename: 'ProjectTransaction', id: string, projectId: string, project: { __typename: 'Project', id: string, name: string } | null } | null, createdBy: { __typename: 'User', id: string, name: string, isSupporter: boolean } | null, contact: { __typename: 'Contact', id: string, name: string, isSupporter: boolean } | null, witnesses: Array<{ __typename: 'Witness', id: string, status: WitnessStatus }> | null }>, summary: { __typename: 'TransactionsSummary', totalLoanGiven: number, totalLoanReceived: number, totalRepaymentMade: number, totalRepaymentReceived: number, totalGiftGiven: number, totalGiftReceived: number, totalAdvancePaid: number, totalAdvanceReceived: number, totalDepositPaid: number, totalDepositReceived: number, totalEscrowed: number, totalRemitted: number, netBalance: number, currency: string } } };
+export type TransactionsQuery = { transactions: { __typename: 'TransactionsResponse', total: number, page: number, limit: number, items: Array<{ __typename: 'Transaction', id: string, amount: number | null, category: AssetCategory, type: TransactionType, status: TransactionStatus, currency: string, date: string, description: string | null, itemName: string | null, quantity: number | null, createdAt: string | null, parentId: string | null, orgId: string | null, projectTransactionId: string | null, isMirroredFromProject: boolean, orgSourceTransactionId: string | null, orgSourceTransaction: { __typename: 'Transaction', id: string, organisation: { __typename: 'Organisation', id: string, name: string, slug: string } | null, projectTransaction: { __typename: 'ProjectTransaction', id: string, project: { __typename: 'Project', id: string, name: string } | null } | null } | null, projectTransaction: { __typename: 'ProjectTransaction', id: string, projectId: string, project: { __typename: 'Project', id: string, name: string } | null } | null, createdBy: { __typename: 'User', id: string, name: string, isSupporter: boolean } | null, contact: { __typename: 'Contact', id: string, name: string, isSupporter: boolean } | null, witnesses: Array<{ __typename: 'Witness', id: string, status: WitnessStatus }> | null }>, summary: { __typename: 'TransactionsSummary', totalLoanGiven: number, totalLoanReceived: number, totalRepaymentMade: number, totalRepaymentReceived: number, totalGiftGiven: number, totalGiftReceived: number, totalAdvancePaid: number, totalAdvanceReceived: number, totalDepositPaid: number, totalDepositReceived: number, totalEscrowed: number, totalRemitted: number, netBalance: number, currency: string } } };
 
 export type MyContactTransactionsQueryVariables = Exact<{
   filter?: InputMaybe<FilterSharedHistoryInput>;

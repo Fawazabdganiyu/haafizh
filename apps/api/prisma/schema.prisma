@@ -172,12 +172,17 @@ model Contact {
   linkedUserId        String?
   invitations         ContactInvitation[]
   orgId               String?
+  sourceContactId     String?
   linkedUser          User?                @relation("ContactLinkedUser", fields: [linkedUserId], references: [id])
   user                User                 @relation(fields: [userId], references: [id])
   transactions        Transaction[]
   projectTransactions ProjectTransaction[]
   organisation        Organisation?        @relation("OrgContacts", fields: [orgId], references: [id])
+  sourceContact       Contact?             @relation("ContactPromotion", fields: [sourceContactId], references: [id])
+  derivedContacts     Contact[]            @relation("ContactPromotion")
 
+  @@unique([orgId, sourceContactId])
+  @@index([sourceContactId])
   @@map("contacts")
 }
 
@@ -200,6 +205,7 @@ model Transaction {
   orgId                 String?
   projectTransactionId  String?              @unique
   isMirroredFromProject Boolean              @default(false)
+  orgSourceTransactionId String?             @unique
   history               TransactionHistory[]
   contact               Contact?             @relation(fields: [contactId], references: [id])
   createdBy             User                 @relation("TransactionCreator", fields: [createdById], references: [id])
@@ -208,6 +214,8 @@ model Transaction {
   witnesses             Witness[]
   organisation          Organisation?        @relation("OrgTransactions", fields: [orgId], references: [id])
   projectTransaction    ProjectTransaction?  @relation(fields: [projectTransactionId], references: [id], onDelete: Restrict)
+  orgSourceTransaction  Transaction?         @relation("OrgPersonalMirror", fields: [orgSourceTransactionId], references: [id])
+  personalMirror        Transaction?         @relation("OrgPersonalMirror")
 
   @@map("transactions")
 }

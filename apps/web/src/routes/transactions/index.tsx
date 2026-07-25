@@ -14,6 +14,7 @@ import {
 import { useState } from "react";
 import { ItemsList } from "@/components/items/ItemsList";
 import { PersonalEntriesTab } from "@/components/personal-entries/PersonalEntriesTab";
+import { OrgAttributionBadge } from "@/components/transactions/OrgAttributionBadge";
 import { TransactionAmount } from "@/components/transactions/TransactionAmount";
 import { TransactionCharts } from "@/components/transactions/TransactionCharts";
 import { TransactionSummaryCard } from "@/components/transactions/TransactionSummaryCard";
@@ -361,6 +362,10 @@ function TransactionsPage() {
                                     SHARED
                                   </span>
                                 )}
+                                <OrgAttributionBadge
+                                  orgSourceTransaction={tx.orgSourceTransaction}
+                                  className="w-fit"
+                                />
                               </div>
                             </TableCell>
                             <TableCell>
@@ -483,6 +488,10 @@ function TransactionsPage() {
                                     SHARED
                                   </span>
                                 )}
+                                <OrgAttributionBadge
+                                  orgSourceTransaction={tx.orgSourceTransaction}
+                                  className="w-fit"
+                                />
                               </div>
                             </div>
                             <TransactionTypeBadge type={tx.type} />

@@ -1,11 +1,13 @@
-import { Plus } from "lucide-react";
+import { Plus, Share2 } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { ContactFormDialog } from "@/components/contacts/ContactFormDialog";
+import { ShareContactDialog } from "@/components/contacts/ShareContactDialog";
 import { IntentPicker } from "@/components/transactions/IntentPicker";
 import { TransactionTypeHelp } from "@/components/transactions/TransactionTypeHelp";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   Form,
@@ -16,6 +18,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { BrandLoader } from "@/components/ui/page-loader";
 import {
   Select,
@@ -26,6 +29,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { type SelectedWitness, WitnessSelector } from "@/components/witnesses/WitnessSelector";
+import { useActiveOrg } from "@/hooks/use-active-org";
+import { useAuth } from "@/hooks/use-auth";
 import { useAmountInput } from "@/hooks/useAmountInput";
 import { useContacts } from "@/hooks/useContacts";
 import { useProjects } from "@/hooks/useProjects";
@@ -67,6 +72,12 @@ export const transactionFormSchema = z
     description: z.string().optional(),
     category: z.enum([AssetCategory.Funds, AssetCategory.Item]).default(AssetCategory.Funds),
     currency: z.string().min(1, "Currency is required").default("NGN"),
+    /**
+     * Org-mode only: also record this on the caller's personal ledger when
+     * the selected contact is a shared copy of one of their own personal
+     * contacts. No-op server-side otherwise, so defaulting true is safe.
+     */
+    recordOnPersonalLedger: z.boolean().default(true),
     witnesses: z
       .array(
         z.object({
@@ -136,7 +147,12 @@ const TYPE_OPTIONS: TypeOption[] = [
 /* -------------------------------------------------------------------------- */
 
 export type FormMode = "create" | "edit";
-export type LockableField = "type" | "contactId" | "category" | "projectId";
+export type LockableField =
+  | "type"
+  | "contactId"
+  | "category"
+  | "projectId"
+  | "recordOnPersonalLedger";
 
 interface TransactionFormFieldsProps {
   form: UseFormReturn<TransactionFormValues>;
@@ -164,7 +180,10 @@ export function TransactionFormFields({
 }: TransactionFormFieldsProps) {
   const { contacts, loading: loadingContacts } = useContacts();
   const { projects, loading: loadingProjects } = useProjects();
+  const { isOrgMode } = useActiveOrg();
+  const { user } = useAuth();
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
+  const [isShareContactDialogOpen, setIsShareContactDialogOpen] = useState(false);
   const [newlyCreatedContact, setNewlyCreatedContact] = useState<{
     id: string;
     name: string;
@@ -183,6 +202,22 @@ export function TransactionFormFields({
   const isLocked = (field: LockableField) => lockedFields.includes(field);
 
   const visibleTypeOptions = TYPE_OPTIONS.filter((opt) => mode === "edit" || !opt.childOnly);
+
+  const selectedContactId = form.watch("contactId");
+  const selectedContact = contacts.find((c) => c.id === selectedContactId);
+  // Create-time only — recordOnPersonalLedger can't be retroactively attached
+  // to an existing transaction via update(), so there's nothing meaningful
+  // to show once the transaction already exists. Also only for the member
+  // who actually shared the contact in — the backend silently no-ops the
+  // mirror for anyone else (it can't write onto a personal ledger it
+  // doesn't own), so showing a checked, promise-labelled toggle to another
+  // member would be a lie the UI tells on the backend's behalf.
+  const showPersonalLedgerToggle =
+    mode === "create" &&
+    isOrgMode &&
+    !isLocked("recordOnPersonalLedger") &&
+    !!selectedContact?.sourceContactId &&
+    selectedContact?.sharedBy?.id === user?.id;
 
   return (
     <>
@@ -218,19 +253,33 @@ export function TransactionFormFields({
           name="contactId"
           render={({ field }) => (
             <FormItem>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-1">
                 <FormLabel>Contact</FormLabel>
                 {!isLocked("contactId") && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                    onClick={() => setIsContactDialogOpen(true)}
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    New Contact
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    {isOrgMode && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => setIsShareContactDialogOpen(true)}
+                      >
+                        <Share2 className="h-3 w-3 mr-1" />
+                        From My Contacts
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                      onClick={() => setIsContactDialogOpen(true)}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      New Contact
+                    </Button>
+                  </div>
                 )}
               </div>
               <Select
@@ -275,6 +324,29 @@ export function TransactionFormFields({
           )}
         />
       </div>
+
+      {showPersonalLedgerToggle && (
+        <FormField
+          control={form.control}
+          name="recordOnPersonalLedger"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start gap-3 rounded-xl border border-border/50 p-3">
+              <FormControl>
+                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <Label className="font-medium">
+                  Also record on my personal ledger (I'm personally liable for this)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Writes a matching entry on your own {selectedContact?.name}'s balance, labelled
+                  "on behalf of" this organisation.
+                </p>
+              </div>
+            </FormItem>
+          )}
+        />
+      )}
 
       {category === AssetCategory.Funds && (
         <FormField
@@ -501,6 +573,21 @@ export function TransactionFormFields({
           setNewlyCreatedContact(newContact);
           setTimeout(() => {
             form.setValue("contactId", newContact.id, {
+              shouldDirty: true,
+              shouldValidate: true,
+            });
+          }, 0);
+        }}
+      />
+
+      <ShareContactDialog
+        isOpen={isShareContactDialogOpen}
+        onClose={() => setIsShareContactDialogOpen(false)}
+        onSuccess={(sharedContact) => {
+          setNewlyCreatedContact(sharedContact);
+          form.setValue("recordOnPersonalLedger", true, { shouldDirty: true });
+          setTimeout(() => {
+            form.setValue("contactId", sharedContact.id, {
               shouldDirty: true,
               shouldValidate: true,
             });

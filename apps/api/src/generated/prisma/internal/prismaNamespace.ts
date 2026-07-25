@@ -2572,7 +2572,8 @@ export const ContactScalarFieldEnum = {
   firstName: 'firstName',
   lastName: 'lastName',
   linkedUserId: 'linkedUserId',
-  orgId: 'orgId'
+  orgId: 'orgId',
+  sourceContactId: 'sourceContactId'
 } as const
 
 export type ContactScalarFieldEnum = (typeof ContactScalarFieldEnum)[keyof typeof ContactScalarFieldEnum]
@@ -2595,7 +2596,8 @@ export const TransactionScalarFieldEnum = {
   currency: 'currency',
   orgId: 'orgId',
   projectTransactionId: 'projectTransactionId',
-  isMirroredFromProject: 'isMirroredFromProject'
+  isMirroredFromProject: 'isMirroredFromProject',
+  orgSourceTransactionId: 'orgSourceTransactionId'
 } as const
 
 export type TransactionScalarFieldEnum = (typeof TransactionScalarFieldEnum)[keyof typeof TransactionScalarFieldEnum]

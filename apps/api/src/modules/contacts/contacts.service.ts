@@ -157,6 +157,55 @@ export class ContactsService {
   }
 
   /**
+   * Personal contacts (userId: me, orgId: null) that have no existing
+   * org-owned copy in the active org yet (derivedContacts: none for that
+   * org) — the candidate list for "From my contacts" when recording an org
+   * transaction. Requires an active org: sharing only makes sense from
+   * inside one.
+   */
+  async findShareable(
+    userId: string,
+    orgId: string | null,
+    filter?: FilterContactInput,
+  ) {
+    if (!orgId) {
+      throw new BadRequestException(
+        'An active organisation is required to list shareable contacts',
+      );
+    }
+
+    const page = filter?.page ?? 1;
+    const limit = filter?.limit ?? 25;
+    const search = filter?.search;
+
+    const where: Prisma.ContactWhereInput = {
+      userId,
+      orgId: null,
+      derivedContacts: { none: { orgId } },
+      ...(search && {
+        OR: [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          { phoneNumber: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+
+    const [total, items] = await Promise.all([
+      this.prisma.contact.count({ where }),
+      this.prisma.contact.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+
+    return { items, total, page, limit };
+  }
+
+  /**
    * Returns the effective principal of a transaction for balance math:
    * the raw amount minus any non-cancelled gift conversions (clamped at 0).
    * Shared by `computeContactBalance` (list view) and `getBalance`
@@ -215,7 +264,44 @@ export class ContactsService {
     return balance;
   }
 
-  async findOne(id: string, userId: string) {
+  /**
+   * Authorises access to a contact already loaded from the DB.
+   * Org contacts (contact.orgId set): caller must be an active member of
+   * that same org — membership, not creation, grants access, since org
+   * contacts are shared by every member. Personal contacts (orgId null):
+   * caller must be the creator or the linked platform user (shared ledger).
+   */
+  private async assertContactAccess(
+    contact: Contact,
+    userId: string,
+    orgId: string | null,
+  ): Promise<void> {
+    if (contact.orgId) {
+      if (contact.orgId !== orgId) {
+        throw new ForbiddenException(
+          'You do not have permission to access this contact',
+        );
+      }
+      const member = await this.prisma.organisationMember.findUnique({
+        where: { orgId_userId: { orgId: contact.orgId, userId } },
+      });
+      if (!member) {
+        throw new ForbiddenException(
+          'You do not have permission to access this contact',
+        );
+      }
+      return;
+    }
+
+    // Allow access if the user is the owner OR the linked user (shared ledger)
+    if (contact.userId !== userId && contact.linkedUserId !== userId) {
+      throw new ForbiddenException(
+        'You do not have permission to access this contact',
+      );
+    }
+  }
+
+  async findOne(id: string, userId: string, orgId: string | null = null) {
     const contact = await this.prisma.contact.findUnique({
       where: { id },
       include: {
@@ -228,12 +314,7 @@ export class ContactsService {
       throw new NotFoundException(`Contact with ID ${id} not found`);
     }
 
-    // Allow access if the user is the owner OR the linked user (shared ledger)
-    if (contact.userId !== userId && contact.linkedUserId !== userId) {
-      throw new ForbiddenException(
-        'You do not have permission to access this contact',
-      );
-    }
+    await this.assertContactAccess(contact, userId, orgId);
 
     return contact;
   }
@@ -242,9 +323,10 @@ export class ContactsService {
     id: string,
     updateContactInput: UpdateContactInput,
     userId: string,
+    orgId: string | null = null,
   ) {
-    // Check existence and ownership
-    await this.findOne(id, userId);
+    // Check existence and access
+    await this.findOne(id, userId, orgId);
 
     const { name, email, phoneNumber } = updateContactInput;
     let nameData = {};
@@ -265,74 +347,37 @@ export class ContactsService {
     });
   }
 
-  async remove(id: string, userId: string) {
+  async remove(id: string, userId: string, orgId: string | null = null) {
     if (!userId) {
       throw new BadRequestException('User ID is required to remove a contact');
     }
 
-    // Check existence and ownership
-    await this.findOne(id, userId);
+    // Check existence and access
+    await this.findOne(id, userId, orgId);
 
     return this.prisma.contact.delete({
       where: { id },
     });
   }
 
-  async getBalance(contactId: string, userId: string): Promise<number> {
-    const contact = await this.prisma.contact.findUnique({
-      where: { id: contactId },
-      select: { linkedUserId: true },
-    });
-
-    const where: Prisma.TransactionWhereInput = {
-      OR: [
-        {
-          contactId,
-          category: AssetCategory.FUNDS,
-          status: { not: 'CANCELLED' },
-        },
-      ],
-    };
-
-    if (contact?.linkedUserId) {
-      where.OR.push({
-        // Transactions where the contact is the creator and the current user is the contact
-        createdById: contact.linkedUserId,
-        contact: {
-          linkedUserId: userId,
-        },
-        category: AssetCategory.FUNDS,
-        status: { not: 'CANCELLED' },
-      });
-    }
-
-    const transactions = await this.prisma.transaction.findMany({
-      where,
-      select: {
-        id: true,
-        type: true,
-        amount: true,
-        parentId: true,
-        createdById: true,
-        conversions: {
-          // Load BOTH gift conversion sides: a LOAN_GIVEN parent gets reduced by
-          // GIFT_GIVEN conversions, and a LOAN_RECEIVED parent gets reduced by
-          // GIFT_RECEIVED conversions. Only non-cancelled conversions count.
-          where: {
-            type: { in: ['GIFT_GIVEN', 'GIFT_RECEIVED'] },
-            status: { not: 'CANCELLED' },
-          },
-          select: {
-            amount: true,
-          },
-        },
-      },
-    });
-
+  /**
+   * Sums one side of a contact's balance. `flip: false` for transactions
+   * recorded directly against this Contact row (apply the sign as-is,
+   * regardless of *which* org member created it — org standing is a
+   * property of the org↔contact relationship, not the recording member's);
+   * `flip: true` for the shared-ledger reverse side (see `getBalance`).
+   */
+  private sumBalanceTransactions(
+    transactions: Array<{
+      type: string;
+      amount: unknown;
+      parentId?: string | null;
+      conversions?: Array<{ amount: unknown }>;
+    }>,
+    flip: boolean,
+  ): number {
     let balance = 0;
     for (const tx of transactions) {
-      const isCreator = tx.createdById === userId;
-
       // If this is a GIFT_GIVEN/GIFT_RECEIVED transaction that has a parent, it's a conversion.
       if (
         (tx.type === 'GIFT_GIVEN' || tx.type === 'GIFT_RECEIVED') &&
@@ -342,9 +387,76 @@ export class ContactsService {
       }
 
       const amount = this.effectiveTransactionAmount(tx);
-
       const sign = CONTACT_STANDING_SIGN[tx.type] ?? 0;
-      balance += isCreator ? sign * amount : -sign * amount;
+      balance += flip ? -sign * amount : sign * amount;
+    }
+    return balance;
+  }
+
+  async getBalance(contactId: string, userId: string): Promise<number> {
+    const contact = await this.prisma.contact.findUnique({
+      where: { id: contactId },
+      select: { linkedUserId: true, orgId: true },
+    });
+
+    const conversionsSelect = {
+      // Load BOTH gift conversion sides: a LOAN_GIVEN parent gets reduced by
+      // GIFT_GIVEN conversions, and a LOAN_RECEIVED parent gets reduced by
+      // GIFT_RECEIVED conversions. Only non-cancelled conversions count.
+      where: {
+        type: {
+          in: ['GIFT_GIVEN', 'GIFT_RECEIVED'],
+        } as Prisma.EnumTransactionTypeFilter,
+        status: { not: 'CANCELLED' } as Prisma.EnumTransactionStatusFilter,
+      },
+      select: { amount: true },
+    };
+
+    // Direct transactions recorded against this Contact row. For an org
+    // contact these can be created by *any* member — the sign is applied
+    // as-is regardless of creator, since org standing doesn't flip per
+    // viewer. (Personal contacts can only ever be created-against by their
+    // one owner, so this was already effectively unflipped there too.)
+    const directTransactions = await this.prisma.transaction.findMany({
+      where: {
+        contactId,
+        category: AssetCategory.FUNDS,
+        status: { not: 'CANCELLED' },
+      },
+      select: {
+        type: true,
+        amount: true,
+        parentId: true,
+        conversions: conversionsSelect,
+      },
+    });
+    let balance = this.sumBalanceTransactions(directTransactions, false);
+
+    // Shared-ledger reverse side: transactions the linked platform user
+    // created against *their own* contact-record naming this user back —
+    // always flipped, since it's literally the other party's view of the
+    // same relationship. Personal contacts only: an org contact's
+    // linkedUserId is copied over by promoteContactToOrg for perspective
+    // flipping on transactions *within that org*, not an invitation to
+    // pull in the linked user's unrelated private personal-ledger activity
+    // with a third party into a balance shown to other org members.
+    if (!contact?.orgId && contact?.linkedUserId) {
+      const reverseTransactions = await this.prisma.transaction.findMany({
+        where: {
+          createdById: contact.linkedUserId,
+          contact: { linkedUserId: userId },
+          category: AssetCategory.FUNDS,
+          status: { not: 'CANCELLED' },
+          orgId: null,
+        },
+        select: {
+          type: true,
+          amount: true,
+          parentId: true,
+          conversions: conversionsSelect,
+        },
+      });
+      balance += this.sumBalanceTransactions(reverseTransactions, true);
     }
 
     return balance;
@@ -354,8 +466,9 @@ export class ContactsService {
     id: string,
     userId: string,
     contactData?: Contact,
+    orgId: string | null = null,
   ) {
-    const contact = contactData || (await this.findOne(id, userId));
+    const contact = contactData || (await this.findOne(id, userId, orgId));
 
     if (!contact.email) {
       return {
@@ -383,8 +496,12 @@ export class ContactsService {
     };
   }
 
-  async inviteContactToPlatform(id: string, userId: string) {
-    const contact = await this.findOne(id, userId);
+  async inviteContactToPlatform(
+    id: string,
+    userId: string,
+    orgId: string | null = null,
+  ) {
+    const contact = await this.findOne(id, userId, orgId);
 
     if (!contact.email) {
       throw new BadRequestException(
@@ -392,7 +509,12 @@ export class ContactsService {
       );
     }
 
-    const status = await this.checkContactOnPlatform(id, userId);
+    const status = await this.checkContactOnPlatform(
+      id,
+      userId,
+      undefined,
+      orgId,
+    );
     if (status.isRegistered) {
       throw new BadRequestException(
         'Contact is already registered on the platform',
@@ -454,7 +576,11 @@ export class ContactsService {
     };
   }
 
-  async resendContactInvitation(contactId: string, userId: string) {
+  async resendContactInvitation(
+    contactId: string,
+    userId: string,
+    orgId: string | null = null,
+  ) {
     const invitation = await this.prisma.contactInvitation.findFirst({
       where: {
         contactId,
@@ -469,7 +595,7 @@ export class ContactsService {
       );
     }
 
-    return this.inviteContactToPlatform(contactId, userId);
+    return this.inviteContactToPlatform(contactId, userId, orgId);
   }
 
   async linkContactsForUser(userId: string, email: string) {

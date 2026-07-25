@@ -17,6 +17,7 @@ import { User } from '../../users/entities/user.entity';
 import { Witness } from '../../witnesses/entities/witness.entity';
 import { TransactionHistory } from './transaction-history.entity';
 import { ProjectTransaction } from '../../projects/entities/project-transaction.entity';
+import { Organisation } from '../../organisations/entities/organisation.entity';
 
 registerEnumType(TransactionStatus, {
   name: 'TransactionStatus',
@@ -112,4 +113,24 @@ export class Transaction {
 
   @Field(() => ProjectTransaction, { nullable: true })
   projectTransaction?: ProjectTransaction;
+
+  @Field({ nullable: true })
+  orgId?: string;
+
+  @Field(() => Organisation, { nullable: true })
+  organisation?: Organisation;
+
+  /**
+   * Set only on a personal-ledger mirror row (see
+   * TransactionsService.createWithClient's recordOnPersonalLedger branch):
+   * points back at the org transaction it reflects. Read this (rather than
+   * denormalised org/project columns) to render "on behalf of <org>" —
+   * org and project attribution live on the org-side row and are reached
+   * through this link so re-linking a project never leaves the mirror stale.
+   */
+  @Field({ nullable: true })
+  orgSourceTransactionId?: string;
+
+  @Field(() => Transaction, { nullable: true })
+  orgSourceTransaction?: Transaction;
 }

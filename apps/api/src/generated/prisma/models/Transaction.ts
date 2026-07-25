@@ -54,6 +54,7 @@ export type TransactionMinAggregateOutputType = {
   orgId: string | null
   projectTransactionId: string | null
   isMirroredFromProject: boolean | null
+  orgSourceTransactionId: string | null
 }
 
 export type TransactionMaxAggregateOutputType = {
@@ -74,6 +75,7 @@ export type TransactionMaxAggregateOutputType = {
   orgId: string | null
   projectTransactionId: string | null
   isMirroredFromProject: boolean | null
+  orgSourceTransactionId: string | null
 }
 
 export type TransactionCountAggregateOutputType = {
@@ -94,6 +96,7 @@ export type TransactionCountAggregateOutputType = {
   orgId: number
   projectTransactionId: number
   isMirroredFromProject: number
+  orgSourceTransactionId: number
   _all: number
 }
 
@@ -126,6 +129,7 @@ export type TransactionMinAggregateInputType = {
   orgId?: true
   projectTransactionId?: true
   isMirroredFromProject?: true
+  orgSourceTransactionId?: true
 }
 
 export type TransactionMaxAggregateInputType = {
@@ -146,6 +150,7 @@ export type TransactionMaxAggregateInputType = {
   orgId?: true
   projectTransactionId?: true
   isMirroredFromProject?: true
+  orgSourceTransactionId?: true
 }
 
 export type TransactionCountAggregateInputType = {
@@ -166,6 +171,7 @@ export type TransactionCountAggregateInputType = {
   orgId?: true
   projectTransactionId?: true
   isMirroredFromProject?: true
+  orgSourceTransactionId?: true
   _all?: true
 }
 
@@ -273,6 +279,7 @@ export type TransactionGroupByOutputType = {
   orgId: string | null
   projectTransactionId: string | null
   isMirroredFromProject: boolean
+  orgSourceTransactionId: string | null
   _count: TransactionCountAggregateOutputType | null
   _avg: TransactionAvgAggregateOutputType | null
   _sum: TransactionSumAggregateOutputType | null
@@ -316,6 +323,7 @@ export type TransactionWhereInput = {
   orgId?: Prisma.StringNullableFilter<"Transaction"> | string | null
   projectTransactionId?: Prisma.StringNullableFilter<"Transaction"> | string | null
   isMirroredFromProject?: Prisma.BoolFilter<"Transaction"> | boolean
+  orgSourceTransactionId?: Prisma.StringNullableFilter<"Transaction"> | string | null
   history?: Prisma.TransactionHistoryListRelationFilter
   contact?: Prisma.XOR<Prisma.ContactNullableScalarRelationFilter, Prisma.ContactWhereInput> | null
   createdBy?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -324,6 +332,8 @@ export type TransactionWhereInput = {
   witnesses?: Prisma.WitnessListRelationFilter
   organisation?: Prisma.XOR<Prisma.OrganisationNullableScalarRelationFilter, Prisma.OrganisationWhereInput> | null
   projectTransaction?: Prisma.XOR<Prisma.ProjectTransactionNullableScalarRelationFilter, Prisma.ProjectTransactionWhereInput> | null
+  orgSourceTransaction?: Prisma.XOR<Prisma.TransactionNullableScalarRelationFilter, Prisma.TransactionWhereInput> | null
+  personalMirror?: Prisma.XOR<Prisma.TransactionNullableScalarRelationFilter, Prisma.TransactionWhereInput> | null
 }
 
 export type TransactionOrderByWithRelationInput = {
@@ -344,6 +354,7 @@ export type TransactionOrderByWithRelationInput = {
   orgId?: Prisma.SortOrderInput | Prisma.SortOrder
   projectTransactionId?: Prisma.SortOrderInput | Prisma.SortOrder
   isMirroredFromProject?: Prisma.SortOrder
+  orgSourceTransactionId?: Prisma.SortOrderInput | Prisma.SortOrder
   history?: Prisma.TransactionHistoryOrderByRelationAggregateInput
   contact?: Prisma.ContactOrderByWithRelationInput
   createdBy?: Prisma.UserOrderByWithRelationInput
@@ -352,11 +363,14 @@ export type TransactionOrderByWithRelationInput = {
   witnesses?: Prisma.WitnessOrderByRelationAggregateInput
   organisation?: Prisma.OrganisationOrderByWithRelationInput
   projectTransaction?: Prisma.ProjectTransactionOrderByWithRelationInput
+  orgSourceTransaction?: Prisma.TransactionOrderByWithRelationInput
+  personalMirror?: Prisma.TransactionOrderByWithRelationInput
 }
 
 export type TransactionWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   projectTransactionId?: string
+  orgSourceTransactionId?: string
   AND?: Prisma.TransactionWhereInput | Prisma.TransactionWhereInput[]
   OR?: Prisma.TransactionWhereInput[]
   NOT?: Prisma.TransactionWhereInput | Prisma.TransactionWhereInput[]
@@ -383,7 +397,9 @@ export type TransactionWhereUniqueInput = Prisma.AtLeast<{
   witnesses?: Prisma.WitnessListRelationFilter
   organisation?: Prisma.XOR<Prisma.OrganisationNullableScalarRelationFilter, Prisma.OrganisationWhereInput> | null
   projectTransaction?: Prisma.XOR<Prisma.ProjectTransactionNullableScalarRelationFilter, Prisma.ProjectTransactionWhereInput> | null
-}, "id" | "projectTransactionId">
+  orgSourceTransaction?: Prisma.XOR<Prisma.TransactionNullableScalarRelationFilter, Prisma.TransactionWhereInput> | null
+  personalMirror?: Prisma.XOR<Prisma.TransactionNullableScalarRelationFilter, Prisma.TransactionWhereInput> | null
+}, "id" | "projectTransactionId" | "orgSourceTransactionId">
 
 export type TransactionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -403,6 +419,7 @@ export type TransactionOrderByWithAggregationInput = {
   orgId?: Prisma.SortOrderInput | Prisma.SortOrder
   projectTransactionId?: Prisma.SortOrderInput | Prisma.SortOrder
   isMirroredFromProject?: Prisma.SortOrder
+  orgSourceTransactionId?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.TransactionCountOrderByAggregateInput
   _avg?: Prisma.TransactionAvgOrderByAggregateInput
   _max?: Prisma.TransactionMaxOrderByAggregateInput
@@ -431,6 +448,7 @@ export type TransactionScalarWhereWithAggregatesInput = {
   orgId?: Prisma.StringNullableWithAggregatesFilter<"Transaction"> | string | null
   projectTransactionId?: Prisma.StringNullableWithAggregatesFilter<"Transaction"> | string | null
   isMirroredFromProject?: Prisma.BoolWithAggregatesFilter<"Transaction"> | boolean
+  orgSourceTransactionId?: Prisma.StringNullableWithAggregatesFilter<"Transaction"> | string | null
 }
 
 export type TransactionCreateInput = {
@@ -454,6 +472,8 @@ export type TransactionCreateInput = {
   witnesses?: Prisma.WitnessCreateNestedManyWithoutTransactionInput
   organisation?: Prisma.OrganisationCreateNestedOneWithoutTransactionsInput
   projectTransaction?: Prisma.ProjectTransactionCreateNestedOneWithoutTransactionInput
+  orgSourceTransaction?: Prisma.TransactionCreateNestedOneWithoutPersonalMirrorInput
+  personalMirror?: Prisma.TransactionCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionUncheckedCreateInput = {
@@ -474,9 +494,11 @@ export type TransactionUncheckedCreateInput = {
   orgId?: string | null
   projectTransactionId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
   history?: Prisma.TransactionHistoryUncheckedCreateNestedManyWithoutTransactionInput
   conversions?: Prisma.TransactionUncheckedCreateNestedManyWithoutParentInput
   witnesses?: Prisma.WitnessUncheckedCreateNestedManyWithoutTransactionInput
+  personalMirror?: Prisma.TransactionUncheckedCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionUpdateInput = {
@@ -500,6 +522,8 @@ export type TransactionUpdateInput = {
   witnesses?: Prisma.WitnessUpdateManyWithoutTransactionNestedInput
   organisation?: Prisma.OrganisationUpdateOneWithoutTransactionsNestedInput
   projectTransaction?: Prisma.ProjectTransactionUpdateOneWithoutTransactionNestedInput
+  orgSourceTransaction?: Prisma.TransactionUpdateOneWithoutPersonalMirrorNestedInput
+  personalMirror?: Prisma.TransactionUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUncheckedUpdateInput = {
@@ -520,9 +544,11 @@ export type TransactionUncheckedUpdateInput = {
   orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   history?: Prisma.TransactionHistoryUncheckedUpdateManyWithoutTransactionNestedInput
   conversions?: Prisma.TransactionUncheckedUpdateManyWithoutParentNestedInput
   witnesses?: Prisma.WitnessUncheckedUpdateManyWithoutTransactionNestedInput
+  personalMirror?: Prisma.TransactionUncheckedUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionCreateManyInput = {
@@ -543,6 +569,7 @@ export type TransactionCreateManyInput = {
   orgId?: string | null
   projectTransactionId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
 }
 
 export type TransactionUpdateManyMutationInput = {
@@ -578,6 +605,7 @@ export type TransactionUncheckedUpdateManyInput = {
   orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type TransactionListRelationFilter = {
@@ -613,6 +641,7 @@ export type TransactionCountOrderByAggregateInput = {
   orgId?: Prisma.SortOrder
   projectTransactionId?: Prisma.SortOrder
   isMirroredFromProject?: Prisma.SortOrder
+  orgSourceTransactionId?: Prisma.SortOrder
 }
 
 export type TransactionAvgOrderByAggregateInput = {
@@ -638,6 +667,7 @@ export type TransactionMaxOrderByAggregateInput = {
   orgId?: Prisma.SortOrder
   projectTransactionId?: Prisma.SortOrder
   isMirroredFromProject?: Prisma.SortOrder
+  orgSourceTransactionId?: Prisma.SortOrder
 }
 
 export type TransactionMinOrderByAggregateInput = {
@@ -658,6 +688,7 @@ export type TransactionMinOrderByAggregateInput = {
   orgId?: Prisma.SortOrder
   projectTransactionId?: Prisma.SortOrder
   isMirroredFromProject?: Prisma.SortOrder
+  orgSourceTransactionId?: Prisma.SortOrder
 }
 
 export type TransactionSumOrderByAggregateInput = {
@@ -767,11 +798,29 @@ export type TransactionCreateNestedManyWithoutParentInput = {
   connect?: Prisma.TransactionWhereUniqueInput | Prisma.TransactionWhereUniqueInput[]
 }
 
+export type TransactionCreateNestedOneWithoutPersonalMirrorInput = {
+  create?: Prisma.XOR<Prisma.TransactionCreateWithoutPersonalMirrorInput, Prisma.TransactionUncheckedCreateWithoutPersonalMirrorInput>
+  connectOrCreate?: Prisma.TransactionCreateOrConnectWithoutPersonalMirrorInput
+  connect?: Prisma.TransactionWhereUniqueInput
+}
+
+export type TransactionCreateNestedOneWithoutOrgSourceTransactionInput = {
+  create?: Prisma.XOR<Prisma.TransactionCreateWithoutOrgSourceTransactionInput, Prisma.TransactionUncheckedCreateWithoutOrgSourceTransactionInput>
+  connectOrCreate?: Prisma.TransactionCreateOrConnectWithoutOrgSourceTransactionInput
+  connect?: Prisma.TransactionWhereUniqueInput
+}
+
 export type TransactionUncheckedCreateNestedManyWithoutParentInput = {
   create?: Prisma.XOR<Prisma.TransactionCreateWithoutParentInput, Prisma.TransactionUncheckedCreateWithoutParentInput> | Prisma.TransactionCreateWithoutParentInput[] | Prisma.TransactionUncheckedCreateWithoutParentInput[]
   connectOrCreate?: Prisma.TransactionCreateOrConnectWithoutParentInput | Prisma.TransactionCreateOrConnectWithoutParentInput[]
   createMany?: Prisma.TransactionCreateManyParentInputEnvelope
   connect?: Prisma.TransactionWhereUniqueInput | Prisma.TransactionWhereUniqueInput[]
+}
+
+export type TransactionUncheckedCreateNestedOneWithoutOrgSourceTransactionInput = {
+  create?: Prisma.XOR<Prisma.TransactionCreateWithoutOrgSourceTransactionInput, Prisma.TransactionUncheckedCreateWithoutOrgSourceTransactionInput>
+  connectOrCreate?: Prisma.TransactionCreateOrConnectWithoutOrgSourceTransactionInput
+  connect?: Prisma.TransactionWhereUniqueInput
 }
 
 export type EnumAssetCategoryFieldUpdateOperationsInput = {
@@ -826,6 +875,26 @@ export type TransactionUpdateManyWithoutParentNestedInput = {
   deleteMany?: Prisma.TransactionScalarWhereInput | Prisma.TransactionScalarWhereInput[]
 }
 
+export type TransactionUpdateOneWithoutPersonalMirrorNestedInput = {
+  create?: Prisma.XOR<Prisma.TransactionCreateWithoutPersonalMirrorInput, Prisma.TransactionUncheckedCreateWithoutPersonalMirrorInput>
+  connectOrCreate?: Prisma.TransactionCreateOrConnectWithoutPersonalMirrorInput
+  upsert?: Prisma.TransactionUpsertWithoutPersonalMirrorInput
+  disconnect?: Prisma.TransactionWhereInput | boolean
+  delete?: Prisma.TransactionWhereInput | boolean
+  connect?: Prisma.TransactionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TransactionUpdateToOneWithWhereWithoutPersonalMirrorInput, Prisma.TransactionUpdateWithoutPersonalMirrorInput>, Prisma.TransactionUncheckedUpdateWithoutPersonalMirrorInput>
+}
+
+export type TransactionUpdateOneWithoutOrgSourceTransactionNestedInput = {
+  create?: Prisma.XOR<Prisma.TransactionCreateWithoutOrgSourceTransactionInput, Prisma.TransactionUncheckedCreateWithoutOrgSourceTransactionInput>
+  connectOrCreate?: Prisma.TransactionCreateOrConnectWithoutOrgSourceTransactionInput
+  upsert?: Prisma.TransactionUpsertWithoutOrgSourceTransactionInput
+  disconnect?: Prisma.TransactionWhereInput | boolean
+  delete?: Prisma.TransactionWhereInput | boolean
+  connect?: Prisma.TransactionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TransactionUpdateToOneWithWhereWithoutOrgSourceTransactionInput, Prisma.TransactionUpdateWithoutOrgSourceTransactionInput>, Prisma.TransactionUncheckedUpdateWithoutOrgSourceTransactionInput>
+}
+
 export type TransactionUncheckedUpdateManyWithoutParentNestedInput = {
   create?: Prisma.XOR<Prisma.TransactionCreateWithoutParentInput, Prisma.TransactionUncheckedCreateWithoutParentInput> | Prisma.TransactionCreateWithoutParentInput[] | Prisma.TransactionUncheckedCreateWithoutParentInput[]
   connectOrCreate?: Prisma.TransactionCreateOrConnectWithoutParentInput | Prisma.TransactionCreateOrConnectWithoutParentInput[]
@@ -838,6 +907,16 @@ export type TransactionUncheckedUpdateManyWithoutParentNestedInput = {
   update?: Prisma.TransactionUpdateWithWhereUniqueWithoutParentInput | Prisma.TransactionUpdateWithWhereUniqueWithoutParentInput[]
   updateMany?: Prisma.TransactionUpdateManyWithWhereWithoutParentInput | Prisma.TransactionUpdateManyWithWhereWithoutParentInput[]
   deleteMany?: Prisma.TransactionScalarWhereInput | Prisma.TransactionScalarWhereInput[]
+}
+
+export type TransactionUncheckedUpdateOneWithoutOrgSourceTransactionNestedInput = {
+  create?: Prisma.XOR<Prisma.TransactionCreateWithoutOrgSourceTransactionInput, Prisma.TransactionUncheckedCreateWithoutOrgSourceTransactionInput>
+  connectOrCreate?: Prisma.TransactionCreateOrConnectWithoutOrgSourceTransactionInput
+  upsert?: Prisma.TransactionUpsertWithoutOrgSourceTransactionInput
+  disconnect?: Prisma.TransactionWhereInput | boolean
+  delete?: Prisma.TransactionWhereInput | boolean
+  connect?: Prisma.TransactionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TransactionUpdateToOneWithWhereWithoutOrgSourceTransactionInput, Prisma.TransactionUpdateWithoutOrgSourceTransactionInput>, Prisma.TransactionUncheckedUpdateWithoutOrgSourceTransactionInput>
 }
 
 export type TransactionCreateNestedOneWithoutHistoryInput = {
@@ -964,6 +1043,8 @@ export type TransactionCreateWithoutCreatedByInput = {
   witnesses?: Prisma.WitnessCreateNestedManyWithoutTransactionInput
   organisation?: Prisma.OrganisationCreateNestedOneWithoutTransactionsInput
   projectTransaction?: Prisma.ProjectTransactionCreateNestedOneWithoutTransactionInput
+  orgSourceTransaction?: Prisma.TransactionCreateNestedOneWithoutPersonalMirrorInput
+  personalMirror?: Prisma.TransactionCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionUncheckedCreateWithoutCreatedByInput = {
@@ -983,9 +1064,11 @@ export type TransactionUncheckedCreateWithoutCreatedByInput = {
   orgId?: string | null
   projectTransactionId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
   history?: Prisma.TransactionHistoryUncheckedCreateNestedManyWithoutTransactionInput
   conversions?: Prisma.TransactionUncheckedCreateNestedManyWithoutParentInput
   witnesses?: Prisma.WitnessUncheckedCreateNestedManyWithoutTransactionInput
+  personalMirror?: Prisma.TransactionUncheckedCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionCreateOrConnectWithoutCreatedByInput = {
@@ -1035,6 +1118,7 @@ export type TransactionScalarWhereInput = {
   orgId?: Prisma.StringNullableFilter<"Transaction"> | string | null
   projectTransactionId?: Prisma.StringNullableFilter<"Transaction"> | string | null
   isMirroredFromProject?: Prisma.BoolFilter<"Transaction"> | boolean
+  orgSourceTransactionId?: Prisma.StringNullableFilter<"Transaction"> | string | null
 }
 
 export type TransactionCreateWithoutContactInput = {
@@ -1057,6 +1141,8 @@ export type TransactionCreateWithoutContactInput = {
   witnesses?: Prisma.WitnessCreateNestedManyWithoutTransactionInput
   organisation?: Prisma.OrganisationCreateNestedOneWithoutTransactionsInput
   projectTransaction?: Prisma.ProjectTransactionCreateNestedOneWithoutTransactionInput
+  orgSourceTransaction?: Prisma.TransactionCreateNestedOneWithoutPersonalMirrorInput
+  personalMirror?: Prisma.TransactionCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionUncheckedCreateWithoutContactInput = {
@@ -1076,9 +1162,11 @@ export type TransactionUncheckedCreateWithoutContactInput = {
   orgId?: string | null
   projectTransactionId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
   history?: Prisma.TransactionHistoryUncheckedCreateNestedManyWithoutTransactionInput
   conversions?: Prisma.TransactionUncheckedCreateNestedManyWithoutParentInput
   witnesses?: Prisma.WitnessUncheckedCreateNestedManyWithoutTransactionInput
+  personalMirror?: Prisma.TransactionUncheckedCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionCreateOrConnectWithoutContactInput = {
@@ -1127,6 +1215,8 @@ export type TransactionCreateWithoutConversionsInput = {
   witnesses?: Prisma.WitnessCreateNestedManyWithoutTransactionInput
   organisation?: Prisma.OrganisationCreateNestedOneWithoutTransactionsInput
   projectTransaction?: Prisma.ProjectTransactionCreateNestedOneWithoutTransactionInput
+  orgSourceTransaction?: Prisma.TransactionCreateNestedOneWithoutPersonalMirrorInput
+  personalMirror?: Prisma.TransactionCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionUncheckedCreateWithoutConversionsInput = {
@@ -1147,8 +1237,10 @@ export type TransactionUncheckedCreateWithoutConversionsInput = {
   orgId?: string | null
   projectTransactionId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
   history?: Prisma.TransactionHistoryUncheckedCreateNestedManyWithoutTransactionInput
   witnesses?: Prisma.WitnessUncheckedCreateNestedManyWithoutTransactionInput
+  personalMirror?: Prisma.TransactionUncheckedCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionCreateOrConnectWithoutConversionsInput = {
@@ -1176,6 +1268,8 @@ export type TransactionCreateWithoutParentInput = {
   witnesses?: Prisma.WitnessCreateNestedManyWithoutTransactionInput
   organisation?: Prisma.OrganisationCreateNestedOneWithoutTransactionsInput
   projectTransaction?: Prisma.ProjectTransactionCreateNestedOneWithoutTransactionInput
+  orgSourceTransaction?: Prisma.TransactionCreateNestedOneWithoutPersonalMirrorInput
+  personalMirror?: Prisma.TransactionCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionUncheckedCreateWithoutParentInput = {
@@ -1195,9 +1289,11 @@ export type TransactionUncheckedCreateWithoutParentInput = {
   orgId?: string | null
   projectTransactionId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
   history?: Prisma.TransactionHistoryUncheckedCreateNestedManyWithoutTransactionInput
   conversions?: Prisma.TransactionUncheckedCreateNestedManyWithoutParentInput
   witnesses?: Prisma.WitnessUncheckedCreateNestedManyWithoutTransactionInput
+  personalMirror?: Prisma.TransactionUncheckedCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionCreateOrConnectWithoutParentInput = {
@@ -1208,6 +1304,112 @@ export type TransactionCreateOrConnectWithoutParentInput = {
 export type TransactionCreateManyParentInputEnvelope = {
   data: Prisma.TransactionCreateManyParentInput | Prisma.TransactionCreateManyParentInput[]
   skipDuplicates?: boolean
+}
+
+export type TransactionCreateWithoutPersonalMirrorInput = {
+  id?: string
+  category?: $Enums.AssetCategory
+  amount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  itemName?: string | null
+  quantity?: number | null
+  type: $Enums.TransactionType
+  date: Date | string
+  description?: string | null
+  createdAt?: Date | string
+  status?: $Enums.TransactionStatus
+  currency?: string
+  isMirroredFromProject?: boolean
+  history?: Prisma.TransactionHistoryCreateNestedManyWithoutTransactionInput
+  contact?: Prisma.ContactCreateNestedOneWithoutTransactionsInput
+  createdBy: Prisma.UserCreateNestedOneWithoutTransactionsInput
+  parent?: Prisma.TransactionCreateNestedOneWithoutConversionsInput
+  conversions?: Prisma.TransactionCreateNestedManyWithoutParentInput
+  witnesses?: Prisma.WitnessCreateNestedManyWithoutTransactionInput
+  organisation?: Prisma.OrganisationCreateNestedOneWithoutTransactionsInput
+  projectTransaction?: Prisma.ProjectTransactionCreateNestedOneWithoutTransactionInput
+  orgSourceTransaction?: Prisma.TransactionCreateNestedOneWithoutPersonalMirrorInput
+}
+
+export type TransactionUncheckedCreateWithoutPersonalMirrorInput = {
+  id?: string
+  category?: $Enums.AssetCategory
+  amount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  itemName?: string | null
+  quantity?: number | null
+  type: $Enums.TransactionType
+  date: Date | string
+  description?: string | null
+  createdAt?: Date | string
+  contactId?: string | null
+  createdById: string
+  status?: $Enums.TransactionStatus
+  parentId?: string | null
+  currency?: string
+  orgId?: string | null
+  projectTransactionId?: string | null
+  isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
+  history?: Prisma.TransactionHistoryUncheckedCreateNestedManyWithoutTransactionInput
+  conversions?: Prisma.TransactionUncheckedCreateNestedManyWithoutParentInput
+  witnesses?: Prisma.WitnessUncheckedCreateNestedManyWithoutTransactionInput
+}
+
+export type TransactionCreateOrConnectWithoutPersonalMirrorInput = {
+  where: Prisma.TransactionWhereUniqueInput
+  create: Prisma.XOR<Prisma.TransactionCreateWithoutPersonalMirrorInput, Prisma.TransactionUncheckedCreateWithoutPersonalMirrorInput>
+}
+
+export type TransactionCreateWithoutOrgSourceTransactionInput = {
+  id?: string
+  category?: $Enums.AssetCategory
+  amount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  itemName?: string | null
+  quantity?: number | null
+  type: $Enums.TransactionType
+  date: Date | string
+  description?: string | null
+  createdAt?: Date | string
+  status?: $Enums.TransactionStatus
+  currency?: string
+  isMirroredFromProject?: boolean
+  history?: Prisma.TransactionHistoryCreateNestedManyWithoutTransactionInput
+  contact?: Prisma.ContactCreateNestedOneWithoutTransactionsInput
+  createdBy: Prisma.UserCreateNestedOneWithoutTransactionsInput
+  parent?: Prisma.TransactionCreateNestedOneWithoutConversionsInput
+  conversions?: Prisma.TransactionCreateNestedManyWithoutParentInput
+  witnesses?: Prisma.WitnessCreateNestedManyWithoutTransactionInput
+  organisation?: Prisma.OrganisationCreateNestedOneWithoutTransactionsInput
+  projectTransaction?: Prisma.ProjectTransactionCreateNestedOneWithoutTransactionInput
+  personalMirror?: Prisma.TransactionCreateNestedOneWithoutOrgSourceTransactionInput
+}
+
+export type TransactionUncheckedCreateWithoutOrgSourceTransactionInput = {
+  id?: string
+  category?: $Enums.AssetCategory
+  amount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  itemName?: string | null
+  quantity?: number | null
+  type: $Enums.TransactionType
+  date: Date | string
+  description?: string | null
+  createdAt?: Date | string
+  contactId?: string | null
+  createdById: string
+  status?: $Enums.TransactionStatus
+  parentId?: string | null
+  currency?: string
+  orgId?: string | null
+  projectTransactionId?: string | null
+  isMirroredFromProject?: boolean
+  history?: Prisma.TransactionHistoryUncheckedCreateNestedManyWithoutTransactionInput
+  conversions?: Prisma.TransactionUncheckedCreateNestedManyWithoutParentInput
+  witnesses?: Prisma.WitnessUncheckedCreateNestedManyWithoutTransactionInput
+  personalMirror?: Prisma.TransactionUncheckedCreateNestedOneWithoutOrgSourceTransactionInput
+}
+
+export type TransactionCreateOrConnectWithoutOrgSourceTransactionInput = {
+  where: Prisma.TransactionWhereUniqueInput
+  create: Prisma.XOR<Prisma.TransactionCreateWithoutOrgSourceTransactionInput, Prisma.TransactionUncheckedCreateWithoutOrgSourceTransactionInput>
 }
 
 export type TransactionUpsertWithoutConversionsInput = {
@@ -1241,6 +1443,8 @@ export type TransactionUpdateWithoutConversionsInput = {
   witnesses?: Prisma.WitnessUpdateManyWithoutTransactionNestedInput
   organisation?: Prisma.OrganisationUpdateOneWithoutTransactionsNestedInput
   projectTransaction?: Prisma.ProjectTransactionUpdateOneWithoutTransactionNestedInput
+  orgSourceTransaction?: Prisma.TransactionUpdateOneWithoutPersonalMirrorNestedInput
+  personalMirror?: Prisma.TransactionUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUncheckedUpdateWithoutConversionsInput = {
@@ -1261,8 +1465,10 @@ export type TransactionUncheckedUpdateWithoutConversionsInput = {
   orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   history?: Prisma.TransactionHistoryUncheckedUpdateManyWithoutTransactionNestedInput
   witnesses?: Prisma.WitnessUncheckedUpdateManyWithoutTransactionNestedInput
+  personalMirror?: Prisma.TransactionUncheckedUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUpsertWithWhereUniqueWithoutParentInput = {
@@ -1279,6 +1485,124 @@ export type TransactionUpdateWithWhereUniqueWithoutParentInput = {
 export type TransactionUpdateManyWithWhereWithoutParentInput = {
   where: Prisma.TransactionScalarWhereInput
   data: Prisma.XOR<Prisma.TransactionUpdateManyMutationInput, Prisma.TransactionUncheckedUpdateManyWithoutParentInput>
+}
+
+export type TransactionUpsertWithoutPersonalMirrorInput = {
+  update: Prisma.XOR<Prisma.TransactionUpdateWithoutPersonalMirrorInput, Prisma.TransactionUncheckedUpdateWithoutPersonalMirrorInput>
+  create: Prisma.XOR<Prisma.TransactionCreateWithoutPersonalMirrorInput, Prisma.TransactionUncheckedCreateWithoutPersonalMirrorInput>
+  where?: Prisma.TransactionWhereInput
+}
+
+export type TransactionUpdateToOneWithWhereWithoutPersonalMirrorInput = {
+  where?: Prisma.TransactionWhereInput
+  data: Prisma.XOR<Prisma.TransactionUpdateWithoutPersonalMirrorInput, Prisma.TransactionUncheckedUpdateWithoutPersonalMirrorInput>
+}
+
+export type TransactionUpdateWithoutPersonalMirrorInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumAssetCategoryFieldUpdateOperationsInput | $Enums.AssetCategory
+  amount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  itemName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  quantity?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  type?: Prisma.EnumTransactionTypeFieldUpdateOperationsInput | $Enums.TransactionType
+  date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  status?: Prisma.EnumTransactionStatusFieldUpdateOperationsInput | $Enums.TransactionStatus
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  history?: Prisma.TransactionHistoryUpdateManyWithoutTransactionNestedInput
+  contact?: Prisma.ContactUpdateOneWithoutTransactionsNestedInput
+  createdBy?: Prisma.UserUpdateOneRequiredWithoutTransactionsNestedInput
+  parent?: Prisma.TransactionUpdateOneWithoutConversionsNestedInput
+  conversions?: Prisma.TransactionUpdateManyWithoutParentNestedInput
+  witnesses?: Prisma.WitnessUpdateManyWithoutTransactionNestedInput
+  organisation?: Prisma.OrganisationUpdateOneWithoutTransactionsNestedInput
+  projectTransaction?: Prisma.ProjectTransactionUpdateOneWithoutTransactionNestedInput
+  orgSourceTransaction?: Prisma.TransactionUpdateOneWithoutPersonalMirrorNestedInput
+}
+
+export type TransactionUncheckedUpdateWithoutPersonalMirrorInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumAssetCategoryFieldUpdateOperationsInput | $Enums.AssetCategory
+  amount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  itemName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  quantity?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  type?: Prisma.EnumTransactionTypeFieldUpdateOperationsInput | $Enums.TransactionType
+  date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  contactId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdById?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumTransactionStatusFieldUpdateOperationsInput | $Enums.TransactionStatus
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  history?: Prisma.TransactionHistoryUncheckedUpdateManyWithoutTransactionNestedInput
+  conversions?: Prisma.TransactionUncheckedUpdateManyWithoutParentNestedInput
+  witnesses?: Prisma.WitnessUncheckedUpdateManyWithoutTransactionNestedInput
+}
+
+export type TransactionUpsertWithoutOrgSourceTransactionInput = {
+  update: Prisma.XOR<Prisma.TransactionUpdateWithoutOrgSourceTransactionInput, Prisma.TransactionUncheckedUpdateWithoutOrgSourceTransactionInput>
+  create: Prisma.XOR<Prisma.TransactionCreateWithoutOrgSourceTransactionInput, Prisma.TransactionUncheckedCreateWithoutOrgSourceTransactionInput>
+  where?: Prisma.TransactionWhereInput
+}
+
+export type TransactionUpdateToOneWithWhereWithoutOrgSourceTransactionInput = {
+  where?: Prisma.TransactionWhereInput
+  data: Prisma.XOR<Prisma.TransactionUpdateWithoutOrgSourceTransactionInput, Prisma.TransactionUncheckedUpdateWithoutOrgSourceTransactionInput>
+}
+
+export type TransactionUpdateWithoutOrgSourceTransactionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumAssetCategoryFieldUpdateOperationsInput | $Enums.AssetCategory
+  amount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  itemName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  quantity?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  type?: Prisma.EnumTransactionTypeFieldUpdateOperationsInput | $Enums.TransactionType
+  date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  status?: Prisma.EnumTransactionStatusFieldUpdateOperationsInput | $Enums.TransactionStatus
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  history?: Prisma.TransactionHistoryUpdateManyWithoutTransactionNestedInput
+  contact?: Prisma.ContactUpdateOneWithoutTransactionsNestedInput
+  createdBy?: Prisma.UserUpdateOneRequiredWithoutTransactionsNestedInput
+  parent?: Prisma.TransactionUpdateOneWithoutConversionsNestedInput
+  conversions?: Prisma.TransactionUpdateManyWithoutParentNestedInput
+  witnesses?: Prisma.WitnessUpdateManyWithoutTransactionNestedInput
+  organisation?: Prisma.OrganisationUpdateOneWithoutTransactionsNestedInput
+  projectTransaction?: Prisma.ProjectTransactionUpdateOneWithoutTransactionNestedInput
+  personalMirror?: Prisma.TransactionUpdateOneWithoutOrgSourceTransactionNestedInput
+}
+
+export type TransactionUncheckedUpdateWithoutOrgSourceTransactionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumAssetCategoryFieldUpdateOperationsInput | $Enums.AssetCategory
+  amount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  itemName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  quantity?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  type?: Prisma.EnumTransactionTypeFieldUpdateOperationsInput | $Enums.TransactionType
+  date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  contactId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdById?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumTransactionStatusFieldUpdateOperationsInput | $Enums.TransactionStatus
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  history?: Prisma.TransactionHistoryUncheckedUpdateManyWithoutTransactionNestedInput
+  conversions?: Prisma.TransactionUncheckedUpdateManyWithoutParentNestedInput
+  witnesses?: Prisma.WitnessUncheckedUpdateManyWithoutTransactionNestedInput
+  personalMirror?: Prisma.TransactionUncheckedUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionCreateWithoutHistoryInput = {
@@ -1301,6 +1625,8 @@ export type TransactionCreateWithoutHistoryInput = {
   witnesses?: Prisma.WitnessCreateNestedManyWithoutTransactionInput
   organisation?: Prisma.OrganisationCreateNestedOneWithoutTransactionsInput
   projectTransaction?: Prisma.ProjectTransactionCreateNestedOneWithoutTransactionInput
+  orgSourceTransaction?: Prisma.TransactionCreateNestedOneWithoutPersonalMirrorInput
+  personalMirror?: Prisma.TransactionCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionUncheckedCreateWithoutHistoryInput = {
@@ -1321,8 +1647,10 @@ export type TransactionUncheckedCreateWithoutHistoryInput = {
   orgId?: string | null
   projectTransactionId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
   conversions?: Prisma.TransactionUncheckedCreateNestedManyWithoutParentInput
   witnesses?: Prisma.WitnessUncheckedCreateNestedManyWithoutTransactionInput
+  personalMirror?: Prisma.TransactionUncheckedCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionCreateOrConnectWithoutHistoryInput = {
@@ -1361,6 +1689,8 @@ export type TransactionUpdateWithoutHistoryInput = {
   witnesses?: Prisma.WitnessUpdateManyWithoutTransactionNestedInput
   organisation?: Prisma.OrganisationUpdateOneWithoutTransactionsNestedInput
   projectTransaction?: Prisma.ProjectTransactionUpdateOneWithoutTransactionNestedInput
+  orgSourceTransaction?: Prisma.TransactionUpdateOneWithoutPersonalMirrorNestedInput
+  personalMirror?: Prisma.TransactionUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUncheckedUpdateWithoutHistoryInput = {
@@ -1381,8 +1711,10 @@ export type TransactionUncheckedUpdateWithoutHistoryInput = {
   orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversions?: Prisma.TransactionUncheckedUpdateManyWithoutParentNestedInput
   witnesses?: Prisma.WitnessUncheckedUpdateManyWithoutTransactionNestedInput
+  personalMirror?: Prisma.TransactionUncheckedUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionCreateWithoutWitnessesInput = {
@@ -1405,6 +1737,8 @@ export type TransactionCreateWithoutWitnessesInput = {
   conversions?: Prisma.TransactionCreateNestedManyWithoutParentInput
   organisation?: Prisma.OrganisationCreateNestedOneWithoutTransactionsInput
   projectTransaction?: Prisma.ProjectTransactionCreateNestedOneWithoutTransactionInput
+  orgSourceTransaction?: Prisma.TransactionCreateNestedOneWithoutPersonalMirrorInput
+  personalMirror?: Prisma.TransactionCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionUncheckedCreateWithoutWitnessesInput = {
@@ -1425,8 +1759,10 @@ export type TransactionUncheckedCreateWithoutWitnessesInput = {
   orgId?: string | null
   projectTransactionId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
   history?: Prisma.TransactionHistoryUncheckedCreateNestedManyWithoutTransactionInput
   conversions?: Prisma.TransactionUncheckedCreateNestedManyWithoutParentInput
+  personalMirror?: Prisma.TransactionUncheckedCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionCreateOrConnectWithoutWitnessesInput = {
@@ -1465,6 +1801,8 @@ export type TransactionUpdateWithoutWitnessesInput = {
   conversions?: Prisma.TransactionUpdateManyWithoutParentNestedInput
   organisation?: Prisma.OrganisationUpdateOneWithoutTransactionsNestedInput
   projectTransaction?: Prisma.ProjectTransactionUpdateOneWithoutTransactionNestedInput
+  orgSourceTransaction?: Prisma.TransactionUpdateOneWithoutPersonalMirrorNestedInput
+  personalMirror?: Prisma.TransactionUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUncheckedUpdateWithoutWitnessesInput = {
@@ -1485,8 +1823,10 @@ export type TransactionUncheckedUpdateWithoutWitnessesInput = {
   orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   history?: Prisma.TransactionHistoryUncheckedUpdateManyWithoutTransactionNestedInput
   conversions?: Prisma.TransactionUncheckedUpdateManyWithoutParentNestedInput
+  personalMirror?: Prisma.TransactionUncheckedUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionCreateWithoutProjectTransactionInput = {
@@ -1509,6 +1849,8 @@ export type TransactionCreateWithoutProjectTransactionInput = {
   conversions?: Prisma.TransactionCreateNestedManyWithoutParentInput
   witnesses?: Prisma.WitnessCreateNestedManyWithoutTransactionInput
   organisation?: Prisma.OrganisationCreateNestedOneWithoutTransactionsInput
+  orgSourceTransaction?: Prisma.TransactionCreateNestedOneWithoutPersonalMirrorInput
+  personalMirror?: Prisma.TransactionCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionUncheckedCreateWithoutProjectTransactionInput = {
@@ -1528,9 +1870,11 @@ export type TransactionUncheckedCreateWithoutProjectTransactionInput = {
   currency?: string
   orgId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
   history?: Prisma.TransactionHistoryUncheckedCreateNestedManyWithoutTransactionInput
   conversions?: Prisma.TransactionUncheckedCreateNestedManyWithoutParentInput
   witnesses?: Prisma.WitnessUncheckedCreateNestedManyWithoutTransactionInput
+  personalMirror?: Prisma.TransactionUncheckedCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionCreateOrConnectWithoutProjectTransactionInput = {
@@ -1569,6 +1913,8 @@ export type TransactionUpdateWithoutProjectTransactionInput = {
   conversions?: Prisma.TransactionUpdateManyWithoutParentNestedInput
   witnesses?: Prisma.WitnessUpdateManyWithoutTransactionNestedInput
   organisation?: Prisma.OrganisationUpdateOneWithoutTransactionsNestedInput
+  orgSourceTransaction?: Prisma.TransactionUpdateOneWithoutPersonalMirrorNestedInput
+  personalMirror?: Prisma.TransactionUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUncheckedUpdateWithoutProjectTransactionInput = {
@@ -1588,9 +1934,11 @@ export type TransactionUncheckedUpdateWithoutProjectTransactionInput = {
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   history?: Prisma.TransactionHistoryUncheckedUpdateManyWithoutTransactionNestedInput
   conversions?: Prisma.TransactionUncheckedUpdateManyWithoutParentNestedInput
   witnesses?: Prisma.WitnessUncheckedUpdateManyWithoutTransactionNestedInput
+  personalMirror?: Prisma.TransactionUncheckedUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionCreateWithoutOrganisationInput = {
@@ -1613,6 +1961,8 @@ export type TransactionCreateWithoutOrganisationInput = {
   conversions?: Prisma.TransactionCreateNestedManyWithoutParentInput
   witnesses?: Prisma.WitnessCreateNestedManyWithoutTransactionInput
   projectTransaction?: Prisma.ProjectTransactionCreateNestedOneWithoutTransactionInput
+  orgSourceTransaction?: Prisma.TransactionCreateNestedOneWithoutPersonalMirrorInput
+  personalMirror?: Prisma.TransactionCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionUncheckedCreateWithoutOrganisationInput = {
@@ -1632,9 +1982,11 @@ export type TransactionUncheckedCreateWithoutOrganisationInput = {
   currency?: string
   projectTransactionId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
   history?: Prisma.TransactionHistoryUncheckedCreateNestedManyWithoutTransactionInput
   conversions?: Prisma.TransactionUncheckedCreateNestedManyWithoutParentInput
   witnesses?: Prisma.WitnessUncheckedCreateNestedManyWithoutTransactionInput
+  personalMirror?: Prisma.TransactionUncheckedCreateNestedOneWithoutOrgSourceTransactionInput
 }
 
 export type TransactionCreateOrConnectWithoutOrganisationInput = {
@@ -1680,6 +2032,7 @@ export type TransactionCreateManyCreatedByInput = {
   orgId?: string | null
   projectTransactionId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
 }
 
 export type TransactionUpdateWithoutCreatedByInput = {
@@ -1702,6 +2055,8 @@ export type TransactionUpdateWithoutCreatedByInput = {
   witnesses?: Prisma.WitnessUpdateManyWithoutTransactionNestedInput
   organisation?: Prisma.OrganisationUpdateOneWithoutTransactionsNestedInput
   projectTransaction?: Prisma.ProjectTransactionUpdateOneWithoutTransactionNestedInput
+  orgSourceTransaction?: Prisma.TransactionUpdateOneWithoutPersonalMirrorNestedInput
+  personalMirror?: Prisma.TransactionUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUncheckedUpdateWithoutCreatedByInput = {
@@ -1721,9 +2076,11 @@ export type TransactionUncheckedUpdateWithoutCreatedByInput = {
   orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   history?: Prisma.TransactionHistoryUncheckedUpdateManyWithoutTransactionNestedInput
   conversions?: Prisma.TransactionUncheckedUpdateManyWithoutParentNestedInput
   witnesses?: Prisma.WitnessUncheckedUpdateManyWithoutTransactionNestedInput
+  personalMirror?: Prisma.TransactionUncheckedUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUncheckedUpdateManyWithoutCreatedByInput = {
@@ -1743,6 +2100,7 @@ export type TransactionUncheckedUpdateManyWithoutCreatedByInput = {
   orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type TransactionCreateManyContactInput = {
@@ -1762,6 +2120,7 @@ export type TransactionCreateManyContactInput = {
   orgId?: string | null
   projectTransactionId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
 }
 
 export type TransactionUpdateWithoutContactInput = {
@@ -1784,6 +2143,8 @@ export type TransactionUpdateWithoutContactInput = {
   witnesses?: Prisma.WitnessUpdateManyWithoutTransactionNestedInput
   organisation?: Prisma.OrganisationUpdateOneWithoutTransactionsNestedInput
   projectTransaction?: Prisma.ProjectTransactionUpdateOneWithoutTransactionNestedInput
+  orgSourceTransaction?: Prisma.TransactionUpdateOneWithoutPersonalMirrorNestedInput
+  personalMirror?: Prisma.TransactionUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUncheckedUpdateWithoutContactInput = {
@@ -1803,9 +2164,11 @@ export type TransactionUncheckedUpdateWithoutContactInput = {
   orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   history?: Prisma.TransactionHistoryUncheckedUpdateManyWithoutTransactionNestedInput
   conversions?: Prisma.TransactionUncheckedUpdateManyWithoutParentNestedInput
   witnesses?: Prisma.WitnessUncheckedUpdateManyWithoutTransactionNestedInput
+  personalMirror?: Prisma.TransactionUncheckedUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUncheckedUpdateManyWithoutContactInput = {
@@ -1825,6 +2188,7 @@ export type TransactionUncheckedUpdateManyWithoutContactInput = {
   orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type TransactionCreateManyParentInput = {
@@ -1844,6 +2208,7 @@ export type TransactionCreateManyParentInput = {
   orgId?: string | null
   projectTransactionId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
 }
 
 export type TransactionUpdateWithoutParentInput = {
@@ -1866,6 +2231,8 @@ export type TransactionUpdateWithoutParentInput = {
   witnesses?: Prisma.WitnessUpdateManyWithoutTransactionNestedInput
   organisation?: Prisma.OrganisationUpdateOneWithoutTransactionsNestedInput
   projectTransaction?: Prisma.ProjectTransactionUpdateOneWithoutTransactionNestedInput
+  orgSourceTransaction?: Prisma.TransactionUpdateOneWithoutPersonalMirrorNestedInput
+  personalMirror?: Prisma.TransactionUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUncheckedUpdateWithoutParentInput = {
@@ -1885,9 +2252,11 @@ export type TransactionUncheckedUpdateWithoutParentInput = {
   orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   history?: Prisma.TransactionHistoryUncheckedUpdateManyWithoutTransactionNestedInput
   conversions?: Prisma.TransactionUncheckedUpdateManyWithoutParentNestedInput
   witnesses?: Prisma.WitnessUncheckedUpdateManyWithoutTransactionNestedInput
+  personalMirror?: Prisma.TransactionUncheckedUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUncheckedUpdateManyWithoutParentInput = {
@@ -1907,6 +2276,7 @@ export type TransactionUncheckedUpdateManyWithoutParentInput = {
   orgId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type TransactionCreateManyOrganisationInput = {
@@ -1926,6 +2296,7 @@ export type TransactionCreateManyOrganisationInput = {
   currency?: string
   projectTransactionId?: string | null
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: string | null
 }
 
 export type TransactionUpdateWithoutOrganisationInput = {
@@ -1948,6 +2319,8 @@ export type TransactionUpdateWithoutOrganisationInput = {
   conversions?: Prisma.TransactionUpdateManyWithoutParentNestedInput
   witnesses?: Prisma.WitnessUpdateManyWithoutTransactionNestedInput
   projectTransaction?: Prisma.ProjectTransactionUpdateOneWithoutTransactionNestedInput
+  orgSourceTransaction?: Prisma.TransactionUpdateOneWithoutPersonalMirrorNestedInput
+  personalMirror?: Prisma.TransactionUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUncheckedUpdateWithoutOrganisationInput = {
@@ -1967,9 +2340,11 @@ export type TransactionUncheckedUpdateWithoutOrganisationInput = {
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   history?: Prisma.TransactionHistoryUncheckedUpdateManyWithoutTransactionNestedInput
   conversions?: Prisma.TransactionUncheckedUpdateManyWithoutParentNestedInput
   witnesses?: Prisma.WitnessUncheckedUpdateManyWithoutTransactionNestedInput
+  personalMirror?: Prisma.TransactionUncheckedUpdateOneWithoutOrgSourceTransactionNestedInput
 }
 
 export type TransactionUncheckedUpdateManyWithoutOrganisationInput = {
@@ -1989,6 +2364,7 @@ export type TransactionUncheckedUpdateManyWithoutOrganisationInput = {
   currency?: Prisma.StringFieldUpdateOperationsInput | string
   projectTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMirroredFromProject?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orgSourceTransactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 
@@ -2058,6 +2434,7 @@ export type TransactionSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   orgId?: boolean
   projectTransactionId?: boolean
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: boolean
   history?: boolean | Prisma.Transaction$historyArgs<ExtArgs>
   contact?: boolean | Prisma.Transaction$contactArgs<ExtArgs>
   createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2066,6 +2443,8 @@ export type TransactionSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   witnesses?: boolean | Prisma.Transaction$witnessesArgs<ExtArgs>
   organisation?: boolean | Prisma.Transaction$organisationArgs<ExtArgs>
   projectTransaction?: boolean | Prisma.Transaction$projectTransactionArgs<ExtArgs>
+  orgSourceTransaction?: boolean | Prisma.Transaction$orgSourceTransactionArgs<ExtArgs>
+  personalMirror?: boolean | Prisma.Transaction$personalMirrorArgs<ExtArgs>
   _count?: boolean | Prisma.TransactionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["transaction"]>
 
@@ -2087,11 +2466,13 @@ export type TransactionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   orgId?: boolean
   projectTransactionId?: boolean
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: boolean
   contact?: boolean | Prisma.Transaction$contactArgs<ExtArgs>
   createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   parent?: boolean | Prisma.Transaction$parentArgs<ExtArgs>
   organisation?: boolean | Prisma.Transaction$organisationArgs<ExtArgs>
   projectTransaction?: boolean | Prisma.Transaction$projectTransactionArgs<ExtArgs>
+  orgSourceTransaction?: boolean | Prisma.Transaction$orgSourceTransactionArgs<ExtArgs>
 }, ExtArgs["result"]["transaction"]>
 
 export type TransactionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -2112,11 +2493,13 @@ export type TransactionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   orgId?: boolean
   projectTransactionId?: boolean
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: boolean
   contact?: boolean | Prisma.Transaction$contactArgs<ExtArgs>
   createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   parent?: boolean | Prisma.Transaction$parentArgs<ExtArgs>
   organisation?: boolean | Prisma.Transaction$organisationArgs<ExtArgs>
   projectTransaction?: boolean | Prisma.Transaction$projectTransactionArgs<ExtArgs>
+  orgSourceTransaction?: boolean | Prisma.Transaction$orgSourceTransactionArgs<ExtArgs>
 }, ExtArgs["result"]["transaction"]>
 
 export type TransactionSelectScalar = {
@@ -2137,9 +2520,10 @@ export type TransactionSelectScalar = {
   orgId?: boolean
   projectTransactionId?: boolean
   isMirroredFromProject?: boolean
+  orgSourceTransactionId?: boolean
 }
 
-export type TransactionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "category" | "amount" | "itemName" | "quantity" | "type" | "date" | "description" | "createdAt" | "contactId" | "createdById" | "status" | "parentId" | "currency" | "orgId" | "projectTransactionId" | "isMirroredFromProject", ExtArgs["result"]["transaction"]>
+export type TransactionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "category" | "amount" | "itemName" | "quantity" | "type" | "date" | "description" | "createdAt" | "contactId" | "createdById" | "status" | "parentId" | "currency" | "orgId" | "projectTransactionId" | "isMirroredFromProject" | "orgSourceTransactionId", ExtArgs["result"]["transaction"]>
 export type TransactionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   history?: boolean | Prisma.Transaction$historyArgs<ExtArgs>
   contact?: boolean | Prisma.Transaction$contactArgs<ExtArgs>
@@ -2149,6 +2533,8 @@ export type TransactionInclude<ExtArgs extends runtime.Types.Extensions.Internal
   witnesses?: boolean | Prisma.Transaction$witnessesArgs<ExtArgs>
   organisation?: boolean | Prisma.Transaction$organisationArgs<ExtArgs>
   projectTransaction?: boolean | Prisma.Transaction$projectTransactionArgs<ExtArgs>
+  orgSourceTransaction?: boolean | Prisma.Transaction$orgSourceTransactionArgs<ExtArgs>
+  personalMirror?: boolean | Prisma.Transaction$personalMirrorArgs<ExtArgs>
   _count?: boolean | Prisma.TransactionCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TransactionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2157,6 +2543,7 @@ export type TransactionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.
   parent?: boolean | Prisma.Transaction$parentArgs<ExtArgs>
   organisation?: boolean | Prisma.Transaction$organisationArgs<ExtArgs>
   projectTransaction?: boolean | Prisma.Transaction$projectTransactionArgs<ExtArgs>
+  orgSourceTransaction?: boolean | Prisma.Transaction$orgSourceTransactionArgs<ExtArgs>
 }
 export type TransactionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   contact?: boolean | Prisma.Transaction$contactArgs<ExtArgs>
@@ -2164,6 +2551,7 @@ export type TransactionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.
   parent?: boolean | Prisma.Transaction$parentArgs<ExtArgs>
   organisation?: boolean | Prisma.Transaction$organisationArgs<ExtArgs>
   projectTransaction?: boolean | Prisma.Transaction$projectTransactionArgs<ExtArgs>
+  orgSourceTransaction?: boolean | Prisma.Transaction$orgSourceTransactionArgs<ExtArgs>
 }
 
 export type $TransactionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2177,6 +2565,8 @@ export type $TransactionPayload<ExtArgs extends runtime.Types.Extensions.Interna
     witnesses: Prisma.$WitnessPayload<ExtArgs>[]
     organisation: Prisma.$OrganisationPayload<ExtArgs> | null
     projectTransaction: Prisma.$ProjectTransactionPayload<ExtArgs> | null
+    orgSourceTransaction: Prisma.$TransactionPayload<ExtArgs> | null
+    personalMirror: Prisma.$TransactionPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2196,6 +2586,7 @@ export type $TransactionPayload<ExtArgs extends runtime.Types.Extensions.Interna
     orgId: string | null
     projectTransactionId: string | null
     isMirroredFromProject: boolean
+    orgSourceTransactionId: string | null
   }, ExtArgs["result"]["transaction"]>
   composites: {}
 }
@@ -2598,6 +2989,8 @@ export interface Prisma__TransactionClient<T, Null = never, ExtArgs extends runt
   witnesses<T extends Prisma.Transaction$witnessesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Transaction$witnessesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WitnessPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   organisation<T extends Prisma.Transaction$organisationArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Transaction$organisationArgs<ExtArgs>>): Prisma.Prisma__OrganisationClient<runtime.Types.Result.GetResult<Prisma.$OrganisationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   projectTransaction<T extends Prisma.Transaction$projectTransactionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Transaction$projectTransactionArgs<ExtArgs>>): Prisma.Prisma__ProjectTransactionClient<runtime.Types.Result.GetResult<Prisma.$ProjectTransactionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  orgSourceTransaction<T extends Prisma.Transaction$orgSourceTransactionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Transaction$orgSourceTransactionArgs<ExtArgs>>): Prisma.Prisma__TransactionClient<runtime.Types.Result.GetResult<Prisma.$TransactionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  personalMirror<T extends Prisma.Transaction$personalMirrorArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Transaction$personalMirrorArgs<ExtArgs>>): Prisma.Prisma__TransactionClient<runtime.Types.Result.GetResult<Prisma.$TransactionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2644,6 +3037,7 @@ export interface TransactionFieldRefs {
   readonly orgId: Prisma.FieldRef<"Transaction", 'String'>
   readonly projectTransactionId: Prisma.FieldRef<"Transaction", 'String'>
   readonly isMirroredFromProject: Prisma.FieldRef<"Transaction", 'Boolean'>
+  readonly orgSourceTransactionId: Prisma.FieldRef<"Transaction", 'String'>
 }
     
 
@@ -3185,6 +3579,44 @@ export type Transaction$projectTransactionArgs<ExtArgs extends runtime.Types.Ext
    */
   include?: Prisma.ProjectTransactionInclude<ExtArgs> | null
   where?: Prisma.ProjectTransactionWhereInput
+}
+
+/**
+ * Transaction.orgSourceTransaction
+ */
+export type Transaction$orgSourceTransactionArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Transaction
+   */
+  select?: Prisma.TransactionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Transaction
+   */
+  omit?: Prisma.TransactionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TransactionInclude<ExtArgs> | null
+  where?: Prisma.TransactionWhereInput
+}
+
+/**
+ * Transaction.personalMirror
+ */
+export type Transaction$personalMirrorArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Transaction
+   */
+  select?: Prisma.TransactionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Transaction
+   */
+  omit?: Prisma.TransactionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TransactionInclude<ExtArgs> | null
+  where?: Prisma.TransactionWhereInput
 }
 
 /**

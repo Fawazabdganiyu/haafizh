@@ -18,6 +18,7 @@ import { HistoryViewer } from "@/components/history/HistoryViewer";
 import { AddWitnessDialog } from "@/components/transactions/AddWitnessDialog";
 import { ConvertGiftDialog } from "@/components/transactions/ConvertGiftDialog";
 import { EditTransactionDialog } from "@/components/transactions/EditTransactionDialog";
+import { OrgAttributionBadge } from "@/components/transactions/OrgAttributionBadge";
 import { RecordRemitDialog } from "@/components/transactions/RecordRemitDialog";
 import { RecordReturnDialog } from "@/components/transactions/RecordReturnDialog";
 import { TransactionAmount } from "@/components/transactions/TransactionAmount";
@@ -135,18 +136,26 @@ function TransactionDetailPage() {
   const witnesses = currentTransaction.witnesses ?? [];
   const history = currentTransaction.history ?? [];
 
+  // A personal-ledger mirror's children are only ever created automatically
+  // alongside the org-side child (see TransactionsService.maybeCreatePersonalMirror)
+  // — recording one directly here would desync it from the org ledger.
+  const isPersonalMirror = !!currentTransaction.orgSourceTransactionId;
+
   const canConvertToGift =
+    !isPersonalMirror &&
     currentTransaction.category === AssetCategory.Funds &&
     (currentTransaction.type === TransactionType.LoanGiven ||
       currentTransaction.type === TransactionType.LoanReceived);
 
   const canRecordReturn =
+    !isPersonalMirror &&
     currentTransaction.category === AssetCategory.Funds &&
     (currentTransaction.type === TransactionType.LoanGiven ||
       currentTransaction.type === TransactionType.LoanReceived) &&
     !!currentTransaction.contact;
 
   const canRecordRemit =
+    !isPersonalMirror &&
     currentTransaction.category === AssetCategory.Funds &&
     currentTransaction.type === TransactionType.Escrowed &&
     !!currentTransaction.contact;
@@ -203,6 +212,10 @@ function TransactionDetailPage() {
                 <CalendarDays size={14} />
                 {format(new Date(currentTransaction.date as string), "MMMM d, yyyy")}
               </p>
+              <OrgAttributionBadge
+                orgSourceTransaction={currentTransaction.orgSourceTransaction}
+                className="mt-2 w-fit"
+              />
             </div>
 
             {/* Amount — flex-shrink-0 so it never compresses */}
@@ -283,6 +296,12 @@ function TransactionDetailPage() {
             {transaction.isMirroredFromProject ? (
               <span className="text-xs text-muted-foreground italic px-1 self-center">
                 Synced from project — edit or delete it from the project page instead
+              </span>
+            ) : transaction.orgSourceTransactionId ? (
+              <span className="text-xs text-muted-foreground italic px-1 self-center">
+                Recorded on behalf of{" "}
+                {transaction.orgSourceTransaction?.organisation?.name ?? "the organisation"} — edit
+                or delete it from the organisation's ledger instead
               </span>
             ) : (
               <>
