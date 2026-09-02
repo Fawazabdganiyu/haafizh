@@ -7,6 +7,7 @@ import {
 } from '@nestjs/graphql';
 import { ProjectStatus } from '../../../generated/prisma/enums';
 import { PaginatedProjectTransactionsResponse } from './paginated-project-transactions-response.entity';
+import { Contact } from '../../contacts/entities/contact.entity';
 
 registerEnumType(ProjectStatus, { name: 'ProjectStatus' });
 
@@ -50,4 +51,7 @@ export class Project {
 
   @Field(() => PaginatedProjectTransactionsResponse, { nullable: true })
   transactions?: PaginatedProjectTransactionsResponse;
+
+  @Field(() => [Contact], { nullable: true })
+  linkedContacts?: Contact[];
 }

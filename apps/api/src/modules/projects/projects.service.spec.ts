@@ -52,3 +52,46 @@ describe('ProjectsService — findAll pagination', () => {
     expect(prisma.$queryRaw).toHaveBeenCalled();
   });
 });
+
+describe('ProjectsService — getLinkedContacts', () => {
+  let service: ProjectsService;
+  let prisma: { projectTransaction: { findMany: jest.Mock } };
+
+  beforeEach(async () => {
+    prisma = { projectTransaction: { findMany: jest.fn() } };
+    const module = await Test.createTestingModule({
+      providers: [
+        ProjectsService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = module.get(ProjectsService);
+  });
+
+  it('returns the distinct contacts linked via the project transactions', async () => {
+    prisma.projectTransaction.findMany.mockResolvedValue([
+      { contact: { id: 'c1', firstName: 'Aminu', lastName: 'Musa' } },
+      { contact: { id: 'c2', firstName: 'Ngozi', lastName: 'Eze' } },
+    ]);
+
+    const result = await service.getLinkedContacts('proj-1');
+
+    expect(prisma.projectTransaction.findMany).toHaveBeenCalledWith({
+      where: { projectId: 'proj-1', contactId: { not: null } },
+      distinct: ['contactId'],
+      include: { contact: true },
+    });
+    expect(result).toEqual([
+      { id: 'c1', firstName: 'Aminu', lastName: 'Musa' },
+      { id: 'c2', firstName: 'Ngozi', lastName: 'Eze' },
+    ]);
+  });
+
+  it('returns an empty array when no transactions are linked to a contact', async () => {
+    prisma.projectTransaction.findMany.mockResolvedValue([]);
+
+    const result = await service.getLinkedContacts('proj-1');
+
+    expect(result).toEqual([]);
+  });
+});

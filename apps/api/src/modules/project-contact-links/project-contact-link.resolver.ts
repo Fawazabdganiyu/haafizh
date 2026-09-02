@@ -8,6 +8,7 @@ import { CheckFeature } from '../subscription/decorators/check-feature.decorator
 import { FeatureLimitInterceptor } from '../subscription/interceptors/feature-limit.interceptor';
 import { ProjectContactLinkService } from './project-contact-link.service';
 import { ProjectTransaction } from '../projects/entities/project-transaction.entity';
+import { Project } from '../projects/entities/project.entity';
 import { LogProjectTransactionInput } from '../projects/dto/log-project-transaction.input';
 import { UpdateProjectTransactionInput } from '../projects/dto/update-project-transaction.input';
 import { Transaction } from '../transactions/entities/transaction.entity';
@@ -48,6 +49,14 @@ export class ProjectContactLinkResolver {
     @Args('id', { type: () => ID }) id: string,
   ) {
     return this.linkService.removeProjectOriginated(user.id, id);
+  }
+
+  @Mutation(() => Project)
+  async removeProject(
+    @CurrentUser() user: User,
+    @Args('id', { type: () => ID }) id: string,
+  ) {
+    return this.linkService.removeProject(user.id, id);
   }
 
   @Mutation(() => Transaction)

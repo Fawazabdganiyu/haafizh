@@ -413,6 +413,7 @@ type Mutation {
   removeNote(id: ID!): Boolean!
   removeOrgEvent(id: ID!): Boolean!
   removeOrgNote(id: ID!): Boolean!
+  removeProject(id: ID!): Project!
   removeProjectTransaction(id: ID!): ProjectTransaction!
   removePromise(id: String!): Promise!
   removeTransaction(id: ID!): Transaction!
@@ -642,6 +643,7 @@ type Project {
   currency: String!
   description: String
   id: ID!
+  linkedContacts: [Contact!]
   name: String!
   status: ProjectStatus!
   totalExpenses: Float!
