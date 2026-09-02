@@ -133,6 +133,26 @@ export const UPDATE_PROJECT = gql`
   }
 `;
 
+export const REMOVE_PROJECT = gql`
+  mutation RemoveProject($id: ID!) {
+    removeProject(id: $id) {
+      id
+    }
+  }
+`;
+
+export const GET_PROJECT_LINKED_CONTACTS = gql`
+  query GetProjectLinkedContacts($id: ID!) {
+    project(id: $id) {
+      id
+      linkedContacts {
+        id
+        name
+      }
+    }
+  }
+`;
+
 export const LOG_PROJECT_TRANSACTION = gql`
   ${PROJECT_TRANSACTION_FRAGMENT}
   mutation LogProjectTransaction($input: LogProjectTransactionInput!) {

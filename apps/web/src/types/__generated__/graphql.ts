@@ -431,6 +431,7 @@ export type Mutation = {
   removeNote: Scalars['Boolean']['output'];
   removeOrgEvent: Scalars['Boolean']['output'];
   removeOrgNote: Scalars['Boolean']['output'];
+  removeProject: Project;
   removeProjectTransaction: ProjectTransaction;
   removePromise: Promise;
   removeTransaction: Transaction;
@@ -644,6 +645,11 @@ export type MutationRemoveOrgEventArgs = {
 
 
 export type MutationRemoveOrgNoteArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationRemoveProjectArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -996,6 +1002,7 @@ export type Project = {
   currency: Scalars['String']['output'];
   description: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
+  linkedContacts: Maybe<Array<Contact>>;
   name: Scalars['String']['output'];
   status: ProjectStatus;
   totalExpenses: Scalars['Float']['output'];
@@ -2211,6 +2218,20 @@ export type UpdateProjectMutationVariables = Exact<{
 
 
 export type UpdateProjectMutation = { updateProject: { __typename: 'Project', id: string, name: string, description: string | null, budget: number | null, balance: number, totalIncome: number, totalExpenses: number, currency: string, status: ProjectStatus, userId: string, createdAt: string, updatedAt: string } };
+
+export type RemoveProjectMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type RemoveProjectMutation = { removeProject: { __typename: 'Project', id: string } };
+
+export type GetProjectLinkedContactsQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type GetProjectLinkedContactsQuery = { project: { __typename: 'Project', id: string, linkedContacts: Array<{ __typename: 'Contact', id: string, name: string }> | null } };
 
 export type LogProjectTransactionMutationVariables = Exact<{
   input: LogProjectTransactionInput;

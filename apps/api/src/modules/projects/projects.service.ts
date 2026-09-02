@@ -8,6 +8,7 @@ import {
   ProjectBalanceStanding,
 } from './dto/filter-project.input';
 import { PaginatedProjectsResponse } from './entities/paginated-projects-response.entity';
+import { Contact } from '../contacts/entities/contact.entity';
 
 @Injectable()
 export class ProjectsService {
@@ -140,6 +141,23 @@ export class ProjectsService {
         ?._sum.amount?.toNumber() ?? 0;
 
     return { totalIncome: income, totalExpenses: expenses };
+  }
+
+  /** Distinct contacts referenced by this project's transactions — surfaced
+   * on the delete-project confirmation so the consequence of also removing
+   * those contacts' linked ledger entries is communicated up front. */
+  async getLinkedContacts(projectId: string): Promise<Contact[]> {
+    const rows = await this.prisma.projectTransaction.findMany({
+      where: { projectId, contactId: { not: null } },
+      distinct: ['contactId'],
+      include: { contact: true },
+    });
+
+    return rows
+      .map((row) => row.contact)
+      .filter(
+        (contact): contact is NonNullable<typeof contact> => !!contact,
+      ) as unknown as Contact[];
   }
 
   async update(userId: string, input: UpdateProjectInput) {

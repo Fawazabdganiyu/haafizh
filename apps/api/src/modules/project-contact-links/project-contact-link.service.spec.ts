@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,7 +9,9 @@ import { ProjectContactLinkService } from './project-contact-link.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { ProjectTransactionsService } from '../projects/project-transactions.service';
+import { ProjectsService } from '../projects/projects.service';
 import {
+  Prisma,
   ProjectTransactionType,
   TransactionType,
 } from '../../generated/prisma/client';
@@ -34,10 +37,10 @@ const mockContact = {
 };
 
 const mockPrismaService = {
-  project: { findUnique: jest.fn() },
+  project: { findUnique: jest.fn(), delete: jest.fn() },
   contact: { findUnique: jest.fn() },
   transaction: { findUnique: jest.fn(), update: jest.fn() },
-  projectTransaction: { findUnique: jest.fn() },
+  projectTransaction: { findUnique: jest.fn(), findMany: jest.fn() },
   $transaction: jest.fn((fn) => fn(mockPrismaService)),
 };
 
@@ -45,6 +48,7 @@ const mockTransactionsService = {
   create: jest.fn(),
   createWithClient: jest.fn(),
   update: jest.fn(),
+  remove: jest.fn(),
   findOne: jest.fn(),
   notifyWitnesses: jest.fn().mockResolvedValue(undefined),
   syncMirroredAmount: jest.fn(),
@@ -62,6 +66,10 @@ const mockProjectTransactionsService = {
   syncMirroredAmount: jest.fn(),
 };
 
+const mockProjectsService = {
+  findOne: jest.fn(),
+};
+
 describe('ProjectContactLinkService', () => {
   let service: ProjectContactLinkService;
 
@@ -75,6 +83,7 @@ describe('ProjectContactLinkService', () => {
           provide: ProjectTransactionsService,
           useValue: mockProjectTransactionsService,
         },
+        { provide: ProjectsService, useValue: mockProjectsService },
       ],
     }).compile();
 
@@ -690,6 +699,218 @@ describe('ProjectContactLinkService', () => {
       expect(
         mockProjectTransactionsService.removeWithClient,
       ).toHaveBeenCalledWith(mockPrismaService, USER_ID, 'pt-1');
+    });
+  });
+
+  describe('removeProject', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('deletes the project outright when it has no project transactions', async () => {
+      mockProjectsService.findOne.mockResolvedValue(mockProject);
+      mockPrismaService.projectTransaction.findMany.mockResolvedValue([]);
+      mockPrismaService.project.delete.mockResolvedValue(mockProject);
+
+      const result = await service.removeProject(USER_ID, PROJECT_ID);
+
+      expect(mockProjectsService.findOne).toHaveBeenCalledWith(
+        PROJECT_ID,
+        USER_ID,
+      );
+      expect(mockPrismaService.project.delete).toHaveBeenCalledWith({
+        where: { id: PROJECT_ID },
+      });
+      expect(mockTransactionsService.remove).not.toHaveBeenCalled();
+      expect(result).toEqual(mockProject);
+    });
+
+    it('deletes a mix of plain, project-originated-linked, and contact-originated-mirrored transactions, then the project', async () => {
+      mockProjectsService.findOne.mockResolvedValue(mockProject);
+      mockPrismaService.projectTransaction.findMany.mockResolvedValue([
+        { id: 'pt-plain', witnesses: [], transaction: null },
+        {
+          id: 'pt-project-originated',
+          witnesses: [],
+          isMirroredFromContact: false,
+          transaction: {
+            id: 'tx-1',
+            orgId: null,
+            witnesses: [],
+            conversions: [],
+          },
+        },
+        {
+          id: 'pt-contact-originated',
+          witnesses: [],
+          isMirroredFromContact: true,
+          transaction: {
+            id: 'tx-2',
+            orgId: 'org-1',
+            witnesses: [],
+            conversions: [],
+          },
+        },
+      ]);
+      const removeProjectOriginatedSpy = jest
+        .spyOn(service, 'removeProjectOriginated')
+        .mockResolvedValue({ id: 'pt' } as never);
+      mockPrismaService.project.delete.mockResolvedValue(mockProject);
+
+      await service.removeProject(USER_ID, PROJECT_ID);
+
+      expect(removeProjectOriginatedSpy).toHaveBeenCalledWith(
+        USER_ID,
+        'pt-plain',
+      );
+      expect(removeProjectOriginatedSpy).toHaveBeenCalledWith(
+        USER_ID,
+        'pt-project-originated',
+      );
+      expect(mockTransactionsService.remove).toHaveBeenCalledWith(
+        'tx-2',
+        USER_ID,
+        'org-1',
+      );
+      expect(mockPrismaService.project.delete).toHaveBeenCalledWith({
+        where: { id: PROJECT_ID },
+      });
+    });
+
+    it('rejects the whole deletion when a project transaction has a direct witness, deleting nothing', async () => {
+      mockProjectsService.findOne.mockResolvedValue(mockProject);
+      mockPrismaService.projectTransaction.findMany.mockResolvedValue([
+        { id: 'pt-1', witnesses: [{ id: 'w1' }], transaction: null },
+      ]);
+
+      await expect(service.removeProject(USER_ID, PROJECT_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(mockPrismaService.project.delete).not.toHaveBeenCalled();
+      expect(mockTransactionsService.remove).not.toHaveBeenCalled();
+      expect(
+        mockProjectTransactionsService.removeWithClient,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('rejects the whole deletion when a linked transaction has witnesses', async () => {
+      mockProjectsService.findOne.mockResolvedValue(mockProject);
+      mockPrismaService.projectTransaction.findMany.mockResolvedValue([
+        {
+          id: 'pt-1',
+          witnesses: [],
+          isMirroredFromContact: false,
+          transaction: {
+            id: 'tx-1',
+            orgId: null,
+            witnesses: [{ id: 'w1' }],
+            conversions: [],
+          },
+        },
+      ]);
+
+      await expect(service.removeProject(USER_ID, PROJECT_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(mockPrismaService.project.delete).not.toHaveBeenCalled();
+    });
+
+    it('rejects the whole deletion when a project-originated linked transaction has repayment history', async () => {
+      mockProjectsService.findOne.mockResolvedValue(mockProject);
+      mockPrismaService.projectTransaction.findMany.mockResolvedValue([
+        {
+          id: 'pt-1',
+          witnesses: [],
+          isMirroredFromContact: false,
+          transaction: {
+            id: 'tx-1',
+            orgId: null,
+            witnesses: [],
+            conversions: [{ id: 'repay-1' }],
+          },
+        },
+      ]);
+
+      await expect(service.removeProject(USER_ID, PROJECT_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(mockPrismaService.project.delete).not.toHaveBeenCalled();
+    });
+
+    it('rejects the whole deletion when a contact-originated mirror has repayment history, even though TransactionsService.remove has no conversions guard of its own', async () => {
+      // Regression test: TransactionsService.remove() (the delete path used
+      // for isMirroredFromContact rows) never checks `conversions` before
+      // hard-deleting. If this pre-check didn't also block on repayment
+      // history for mirrored rows, removeProject would silently orphan the
+      // child repayment's parentId (ON DELETE SET NULL) instead of blocking.
+      mockProjectsService.findOne.mockResolvedValue(mockProject);
+      mockPrismaService.projectTransaction.findMany.mockResolvedValue([
+        {
+          id: 'pt-1',
+          witnesses: [],
+          isMirroredFromContact: true,
+          transaction: {
+            id: 'tx-1',
+            orgId: null,
+            witnesses: [],
+            conversions: [{ id: 'repay-1' }],
+          },
+        },
+      ]);
+
+      await expect(service.removeProject(USER_ID, PROJECT_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(mockTransactionsService.remove).not.toHaveBeenCalled();
+      expect(mockPrismaService.project.delete).not.toHaveBeenCalled();
+    });
+
+    it('converts a foreign-key violation on the final project delete into a clean ConflictException', async () => {
+      // Regression test: if a witness is added to a mirrored transaction in
+      // the race window between the pre-check and its turn in the loop,
+      // TransactionsService.remove() cancels (not deletes) it instead of
+      // throwing, leaving a residual ProjectTransaction row that trips the
+      // project_transactions_projectId_fkey (RESTRICT) on the final delete.
+      mockProjectsService.findOne.mockResolvedValue(mockProject);
+      mockPrismaService.projectTransaction.findMany.mockResolvedValue([
+        {
+          id: 'pt-1',
+          witnesses: [],
+          isMirroredFromContact: true,
+          transaction: {
+            id: 'tx-1',
+            orgId: null,
+            witnesses: [],
+            conversions: [],
+          },
+        },
+      ]);
+      mockTransactionsService.remove.mockResolvedValue(undefined);
+      mockPrismaService.project.delete.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Foreign key constraint failed',
+          {
+            code: 'P2003',
+            clientVersion: '7.3.0',
+          },
+        ),
+      );
+
+      await expect(service.removeProject(USER_ID, PROJECT_ID)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('propagates NotFoundException from ownership/existence check without touching the DB', async () => {
+      mockProjectsService.findOne.mockRejectedValue(
+        new NotFoundException(`Project with ID ${PROJECT_ID} not found`),
+      );
+
+      await expect(service.removeProject(USER_ID, PROJECT_ID)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(
+        mockPrismaService.projectTransaction.findMany,
+      ).not.toHaveBeenCalled();
+      expect(mockPrismaService.project.delete).not.toHaveBeenCalled();
     });
   });
 });

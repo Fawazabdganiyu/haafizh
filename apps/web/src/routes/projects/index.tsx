@@ -37,7 +37,15 @@ function ProjectsPage() {
     variables,
   } = useProjectFilters();
 
-  const { projects, total, loading } = useProjects(variables.filter);
+  const {
+    projects,
+    total,
+    loading,
+    updateProject,
+    updatingProjectId,
+    removeProject,
+    removingProjectId,
+  } = useProjects(variables.filter);
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
@@ -123,9 +131,16 @@ function ProjectsPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
             {projects.map((project: ProjectFieldsFragment) => (
-              <ProjectCard key={project.id} project={project} />
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onUpdate={updateProject}
+                updating={updatingProjectId === project.id}
+                onDelete={removeProject}
+                removingProject={removingProjectId === project.id}
+              />
             ))}
           </div>
           <Pagination
