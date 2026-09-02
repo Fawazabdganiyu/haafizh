@@ -19,6 +19,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - When using `jest.spyOn`, always add `afterEach(() => jest.restoreAllMocks())` in the same describe block to prevent cross-test mock leakage.
 - Frontend (Vitest): `@testing-library/user-event` is **not installed** — use `fireEvent` from `@testing-library/react` for click/interaction tests.
 - When mocking `useQuery`/`useMutation` by GraphQL operation name in Vitest, don't assume `document.definitions[0]` is the operation — a query built with an interpolated fragment (`${SOME_FIELDS}`) puts the FragmentDefinition first. Find it via `definitions.find(d => d.kind === "OperationDefinition")`.
+- **Manual browser QA**: fresh signups block login on email verification (no local inbox access to the token) — bypass with `psql ... -c "UPDATE users SET \"isEmailVerified\" = true WHERE email = '...'"` on the local dev DB. Same for testing org features: `UPDATE users SET tier = 'PRO' WHERE email = '...'`. Clean up test users/orgs/contacts afterward.
+- **Browser pane clicks**: the screenshot image is scaled down from the actual viewport (e.g. 800×455 image for a 1280×720 viewport) — clicking raw screenshot pixel coordinates lands in the wrong place. Use `ref` from `read_page`/`find` instead of coordinates whenever possible.
 
 ## TypeScript Checks
 
@@ -179,6 +181,7 @@ When a transaction's contact is a registered user (`linkedUserId`):
 
 - **Net Balance (contact-obligation)**: Computed by `computeNetBalance()` in `transactions.service.ts` using all 12 new types. EXPENSE/INCOME are excluded from this computation. Formula: `(LOAN_RECEIVED − LOAN_GIVEN) + (REPAYMENT_RECEIVED − REPAYMENT_MADE) + (GIFT_RECEIVED − GIFT_GIVEN) + (ADVANCE_RECEIVED − ADVANCE_PAID) + (DEPOSIT_RECEIVED − DEPOSIT_PAID) + (ESCROWED − REMITTED)`
 - **Contact Standing**: Computed via `CONTACT_STANDING_SIGN` in `contacts.service.ts`. GIFT types are excluded (no ongoing obligation). Positive = contact owes me, negative = I owe contact.
+- **Sign convention warning**: Net Balance and Contact Standing use *opposite* sign conventions for the same transaction types (confirmed against `transactions.balance.spec.ts`) — e.g. `LOAN_GIVEN` makes Contact Standing positive (contact owes me) but makes Net Balance *negative*. Don't assume the two move together; check the existing test suite before asserting an expected value for either.
 - **Cash Position (Dashboard)**: Displayed as a dedicated stat card in `components/dashboard/Dashboard.tsx` alongside Total Balance, Inflow, and Outflow. Sourced from `PersonalEntriesTab` cash position computation — not from transaction types.
 - **Project Balance**: `project.balance` = `totalIncome − totalExpenses` — `totalIncome`/`totalExpenses` are `@ResolveField` on `Project`, unrelated to transaction types above.
 
@@ -203,6 +206,8 @@ Backend resolvers that accept `@ActiveOrg() orgId: string | null` (Transactions,
 Features with **no org-scoping at all** (always the individual user's own data, regardless of active org): Witness requests, Personal Entries (Cash Position), Personal Notes. These either have no org equivalent (Cash Position, Personal Notes — org notes live under the separate Events & Notes page) or are intentionally personal action items shown in both modes (Witnesses).
 
 `Header.tsx`'s nav dropdowns (desktop) and `mobile-bottom-nav.tsx` (mobile) must stay aligned on this: Transactions/Ledger, Contacts, Promises, Projects, and Witnesses are reachable in both modes; personal Notes is hidden in org mode; Events & Notes/Members/Org Settings are org-mode-only (desktop: dedicated "Organisation" dropdown; mobile: primary tabs).
+
+**Checklist when adding org-membership access control to a resource**: it's not enough to scope the *list* query by `orgId` — grep every other method on that service (`findOne`, `update`, `remove`, and sub-actions like `addWitness`) for a stale creator-only check, and check every *indirect* caller too (e.g. `ProjectContactLinkService` wrapping `TransactionsService`). A resource that lists correctly for all org members but 403s on open/edit/delete for non-creators is the signature of this gap — caught by ultrareview after the fact in the shared-contacts PR, not by initial implementation or tests.
 
 ### Personal Notes (`/notes` route)
 
@@ -317,7 +322,7 @@ Role-gated platform administration surface. Backend module: `apps/api/src/module
 #### Rules
 - **Never use `atlas migrate set`** to mark a migration as applied unless every SQL statement in that file has already been executed. Marking without running causes silent schema drift — missing columns crash the app on startup.
 - **Do not run `db:apply` on production manually** — CI applies migrations automatically via `.github/workflows/ci-atlas.yaml` on merge to `main`.
-- **FK constraints must use `NOT VALID`**: `ADD CONSTRAINT ... FOREIGN KEY ... NOT VALID` followed by `ALTER TABLE ... VALIDATE CONSTRAINT ...` — Atlas lint will block CI if `NOT VALID` is omitted.
+- **FK constraints must use `NOT VALID`**: `ADD CONSTRAINT ... FOREIGN KEY ... NOT VALID` followed by `ALTER TABLE ... VALIDATE CONSTRAINT ...`. `db:migrate`'s auto-generated SQL never adds this automatically, even for a brand-new nullable FK column — check every generated migration by hand before committing.
 - Atlas requires `atlas login` (browser-based); token expires periodically.
 - **Checksum mismatch** on `db:migrate`/`atlas migrate status` (e.g. "X.sql was added... checksum mismatch"): `atlas.sum` is out of sync with files already in `atlas/migrations/` (usually from a merge). Fix with `atlas migrate hash --dir file://atlas/migrations` — recomputes hashes only, applies nothing.
 - **`db:migrate` can bundle in unrelated drift**: if the generated SQL touches tables you didn't change (seen on `contacts`, `notes`, `org_events`, `org_subscriptions`, `organisation_members`, `projects`, `promises`, `transactions` — FK `ON DELETE` behavior drifts from committed schema), that's pre-existing DB drift, not your change. Trim the generated `.sql` to your actual diff before `atlas migrate hash`/`db:apply`.

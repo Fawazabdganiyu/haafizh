@@ -109,16 +109,31 @@ export class ProjectsService {
     };
   }
 
-  async findOne(id: string, userId: string) {
+  async findOne(id: string, userId: string, orgId: string | null = null) {
     const project = await this.prisma.project.findUnique({
       where: { id },
     });
 
-    if (!project || project.userId !== userId) {
+    if (!project) {
       throw new NotFoundException(`Project with ID ${id} not found`);
     }
 
-    return project;
+    if (project.userId === userId) {
+      return project;
+    }
+
+    // Org projects are shared by every member, matching ContactsService's
+    // assertContactAccess convention — membership, not creation, grants access.
+    if (project.orgId && project.orgId === orgId) {
+      const member = await this.prisma.organisationMember.findUnique({
+        where: { orgId_userId: { orgId: project.orgId, userId } },
+      });
+      if (member) {
+        return project;
+      }
+    }
+
+    throw new NotFoundException(`Project with ID ${id} not found`);
   }
 
   async getTransactionTotals(
@@ -142,9 +157,13 @@ export class ProjectsService {
     return { totalIncome: income, totalExpenses: expenses };
   }
 
-  async update(userId: string, input: UpdateProjectInput) {
-    // Verify ownership
-    await this.findOne(input.id, userId);
+  async update(
+    userId: string,
+    input: UpdateProjectInput,
+    orgId: string | null = null,
+  ) {
+    // Verify ownership or org membership
+    await this.findOne(input.id, userId, orgId);
 
     return this.prisma.project.update({
       where: { id: input.id },
