@@ -47,8 +47,9 @@ export class ProjectsResolver {
   async project(
     @Args('id', { type: () => ID }) id: string,
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
   ) {
-    return this.projectsService.findOne(id, user.id);
+    return this.projectsService.findOne(id, user.id, orgId);
   }
 
   @Mutation(() => Project)
@@ -63,9 +64,10 @@ export class ProjectsResolver {
   @Mutation(() => Project)
   async updateProject(
     @CurrentUser() user: User,
+    @ActiveOrg() orgId: string | null,
     @Args('input') input: UpdateProjectInput,
   ) {
-    return this.projectsService.update(user.id, input);
+    return this.projectsService.update(user.id, input, orgId);
   }
 
   @ResolveField(() => Float, { defaultValue: 0 })
