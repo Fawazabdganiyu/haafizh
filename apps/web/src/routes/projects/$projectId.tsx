@@ -1,9 +1,10 @@
 import { useQuery } from "@apollo/client/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Filter, Target, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { ArrowLeft, Filter, Target, Trash2, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { StatsCard } from "@/components/dashboard/StatsCard";
+import { DeleteProjectDialog } from "@/components/projects/DeleteProjectDialog";
 import { EditProjectDialog } from "@/components/projects/EditProjectDialog";
 import type { ProjectTransactionCardTransaction } from "@/components/projects/ProjectTransactionCard";
 import { ProjectTransactionCard } from "@/components/projects/ProjectTransactionCard";
@@ -82,6 +83,12 @@ function ProjectDetailsPage() {
 
   const [deletingTx, setDeletingTx] = useState<ProjectTransactionCardTransaction | null>(null);
 
+  // Deleting the project evicts its cache entry as part of the mutation's own
+  // `update` callback, which can commit a render before the subsequent
+  // navigate-away below runs. This flag skips the "not found" view during
+  // that window so the page renders nothing instead of a jarring flash.
+  const [isNavigatingAway, setIsNavigatingAway] = useState(false);
+
   const [categoryInput, setCategoryInput] = useState("");
   const debouncedCategory = useDebounce(categoryInput);
 
@@ -109,6 +116,8 @@ function ProjectDetailsPage() {
     updating,
     removeTransaction,
     removing,
+    removeProject,
+    removingProject,
   } = useProject(projectId, txFilter);
 
   if (loading) {
@@ -120,6 +129,7 @@ function ProjectDetailsPage() {
   }
 
   if (!project) {
+    if (isNavigatingAway) return null;
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-20">
@@ -197,7 +207,7 @@ function ProjectDetailsPage() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:shrink-0">
           <EditProjectDialog
             project={{
               id: project.id,
@@ -209,6 +219,26 @@ function ProjectDetailsPage() {
             }}
             onUpdate={updateProject}
             updating={updating}
+          />
+          <DeleteProjectDialog
+            projectId={project.id}
+            projectName={project.name}
+            onDelete={() => removeProject(project.id)}
+            onDeleted={() => {
+              setIsNavigatingAway(true);
+              navigate({ to: "/projects" });
+            }}
+            deleting={removingProject}
+            trigger={
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-600 dark:border-rose-900/40 dark:hover:bg-rose-900/20"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete Project
+              </Button>
+            }
           />
           <ProjectTransactionDialog projectId={projectId} />
         </div>

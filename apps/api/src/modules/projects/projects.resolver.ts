@@ -24,6 +24,7 @@ import { PaginatedProjectsResponse } from './entities/paginated-projects-respons
 import { PaginatedProjectTransactionsResponse } from './entities/paginated-project-transactions-response.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
 import { TransactionType } from '../../generated/prisma/client';
+import { Contact } from '../contacts/entities/contact.entity';
 
 @Resolver(() => Project)
 @UseGuards(GqlAuthGuard)
@@ -91,6 +92,11 @@ export class ProjectsResolver {
     @Args('filter', { nullable: true }) filter?: FilterProjectTransactionInput,
   ): Promise<PaginatedProjectTransactionsResponse> {
     return this.projectTransactionsService.findByProject(project.id, filter);
+  }
+
+  @ResolveField(() => [Contact])
+  async linkedContacts(@Parent() project: Project): Promise<Contact[]> {
+    return this.projectsService.getLinkedContacts(project.id);
   }
 
   @Query(() => [String], { name: 'projectTransactionCategorySuggestions' })

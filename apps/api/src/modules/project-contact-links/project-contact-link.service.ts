@@ -3,10 +3,12 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { ProjectTransactionsService } from '../projects/project-transactions.service';
+import { ProjectsService } from '../projects/projects.service';
 import { CreateTransactionInput } from '../transactions/dto/create-transaction.input';
 import { UpdateTransactionInput } from '../transactions/dto/update-transaction.input';
 import { LogProjectTransactionInput } from '../projects/dto/log-project-transaction.input';
@@ -66,6 +68,7 @@ export class ProjectContactLinkService {
     private readonly prisma: PrismaService,
     private readonly transactionsService: TransactionsService,
     private readonly projectTransactionsService: ProjectTransactionsService,
+    private readonly projectsService: ProjectsService,
   ) {}
 
   /** Shared guard: `type` determines cash-flow direction on both sides of a
@@ -799,5 +802,86 @@ export class ProjectContactLinkService {
         id,
       );
     });
+  }
+
+  /** Used by ProjectContactLinkResolver.removeProject */
+  async removeProject(userId: string, projectId: string) {
+    // Obscures existence for non-owners, matching ProjectsService's convention.
+    await this.projectsService.findOne(projectId, userId);
+
+    const projectTransactions = await this.prisma.projectTransaction.findMany({
+      where: { projectId },
+      include: {
+        witnesses: true,
+        transaction: { include: { witnesses: true, conversions: true } },
+      },
+    });
+
+    // All-or-nothing pre-check: reject the whole deletion up front if ANY
+    // transaction is blocked, so we never leave the project partially
+    // deleted because a later row turned out to have a witness.
+    const blocked = projectTransactions.filter((pt) => {
+      if (pt.witnesses.length > 0) return true;
+      if (pt.transaction && pt.transaction.witnesses.length > 0) return true;
+      // Repayment history blocks deletion regardless of link direction —
+      // TransactionsService.remove() (used for isMirroredFromContact rows)
+      // has no conversions guard of its own, so skipping this check for
+      // mirrored rows would let removeProject hard-delete a transaction with
+      // recorded repayments, orphaning the child conversion's parentId.
+      if (pt.transaction && pt.transaction.conversions.length > 0) {
+        return true;
+      }
+      return false;
+    });
+
+    if (blocked.length > 0) {
+      throw new ForbiddenException(
+        `Cannot delete this project: ${blocked.length} transaction(s) have witnesses or repayment history and must be resolved first.`,
+      );
+    }
+
+    // Each row is deleted via the same paths used for a single-transaction
+    // delete elsewhere in the app; each opens its own internal $transaction,
+    // so this loop is NOT one atomic operation with the final project delete.
+    // The pre-check above makes a mid-loop failure rare — it would only
+    // happen if a witness were added in the race window between the check
+    // and this specific row's delete, in which case that row's own guard
+    // fires and stops the loop (a witnessed transaction is never deleted;
+    // the project may be left with some, but never all, transactions
+    // removed, and this method throws rather than silently succeeding).
+    for (const pt of projectTransactions) {
+      if (pt.isMirroredFromContact) {
+        // isMirroredFromContact is only ever set true together with a
+        // linked transaction, so pt.transaction is guaranteed non-null.
+        await this.transactionsService.remove(
+          pt.transaction!.id,
+          userId,
+          pt.transaction!.orgId ?? null,
+        );
+      } else {
+        await this.removeProjectOriginated(userId, pt.id);
+      }
+    }
+
+    try {
+      return await this.prisma.project.delete({ where: { id: projectId } });
+    } catch (err) {
+      // TransactionsService.remove() cancels (rather than deletes) a
+      // witnessed transaction instead of throwing — if a witness was added
+      // to a mirrored row in the race window between the pre-check above and
+      // this row's turn in the loop, that ProjectTransaction survives and
+      // blocks this delete via the project_transactions_projectId_fkey FK
+      // (RESTRICT). Surface that as a clean, actionable error instead of a
+      // raw FK-violation crash.
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2003'
+      ) {
+        throw new ConflictException(
+          'Cannot delete this project: a transaction was modified during deletion and now has a witness. Please resolve it and try again.',
+        );
+      }
+      throw err;
+    }
   }
 }

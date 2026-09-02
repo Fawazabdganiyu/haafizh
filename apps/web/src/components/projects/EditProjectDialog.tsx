@@ -1,4 +1,5 @@
 import { Pencil } from "lucide-react";
+import type { ReactNode } from "react";
 import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -34,9 +35,15 @@ interface EditProjectDialogProps {
   };
   onUpdate: (input: UpdateProjectInput) => Promise<unknown>;
   updating: boolean;
+  trigger?: ReactNode;
 }
 
-export function EditProjectDialog({ project, onUpdate, updating }: EditProjectDialogProps) {
+export function EditProjectDialog({
+  project,
+  onUpdate,
+  updating,
+  trigger,
+}: EditProjectDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description ?? "");
@@ -106,10 +113,12 @@ export function EditProjectDialog({ project, onUpdate, updating }: EditProjectDi
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Pencil className="h-3.5 w-3.5" />
-          Edit Project
-        </Button>
+        {trigger ?? (
+          <Button variant="outline" size="sm" className="gap-2">
+            <Pencil className="h-3.5 w-3.5" />
+            Edit Project
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
